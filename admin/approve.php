@@ -7,7 +7,9 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
     exit();
 }
 
-$sql = "SELECT * FROM bookings WHERE status = 'Approved' ORDER BY checkin_date DESC";
+// Show the full confirmed pipeline — Approved, Checked In, and Checked Out —
+// so a booking doesn't disappear from history the moment reception acts on it.
+$sql = "SELECT * FROM bookings WHERE status IN ('Approved', 'Checked In', 'Checked Out') ORDER BY checkin_date DESC";
 $result = $conn->query($sql);
 ?>
 <!DOCTYPE html>
@@ -142,6 +144,28 @@ $result = $conn->query($sql);
             display: inline-block;
         }
 
+        .status-checkedin {
+            color: #1e40af;
+            font-weight: 600;
+            background: #dbeafe;
+            padding: 6px 16px;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            border: 1px solid #bfdbfe;
+            display: inline-block;
+        }
+
+        .status-checkedout {
+            color: #374151;
+            font-weight: 600;
+            background: #e5e7eb;
+            padding: 6px 16px;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            border: 1px solid #d1d5db;
+            display: inline-block;
+        }
+
         .date-badge {
             background: #edf2f7;
             padding: 4px 10px;
@@ -165,10 +189,11 @@ $result = $conn->query($sql);
     <nav class="nav flex-column">
         <a class="nav-link" href="admin.php"><span>Pending Bookings</span></a>
         <a class="nav-link active" href="approve.php"><span>Approved History</span></a>
-        <a class="nav-link" href="admin_history.php"><span>Cancellation History</span></a>
+        <a class="nav-link" href="admin_cancelled.php"><span>Cancellation History</span></a>
         <a class="nav-link" href="admin_announcements.php"><span>Announcements</span></a>
         <a class="nav-link" href="admin_analytics.php"><span>Dashboard</span></a>
         <hr style="border-color: rgba(255,255,255,0.1); margin: 20px 0;">
+        <a class="nav-link text-info" href="../reception/index.php"><span>🛎 Front Desk</span></a>
         <a class="nav-link text-warning" href="../index.php" target="_blank"><span>← View Website</span></a>
         <a class="nav-link text-danger" href="logout.php"><span>Logout</span></a>
     </nav>
@@ -213,13 +238,24 @@ $result = $conn->query($sql);
                             <span class="date-badge"><?php echo date('M d, Y', strtotime($row['checkout_date'])); ?></span>
                         </td>
                         <td>
-                            <span class="status-approved">✔ Confirmed</span>
+                            <?php if ($row['status'] === 'Checked In'): ?>
+                                <span class="status-checkedin">🔑 Checked In</span>
+                            <?php elseif ($row['status'] === 'Checked Out'): ?>
+                                <span class="status-checkedout">✅ Checked Out</span>
+                            <?php else: ?>
+                                <span class="status-approved">✔ Approved</span>
+                            <?php endif; ?>
                         </td>
                         <td>
-                            <button type="button" class="btn btn-outline-primary btn-sm px-3 btn-view-details"
+                            <button type="button" class="btn btn-outline-primary btn-sm px-3 me-2 btn-view-details"
                                     data-booking='<?php echo htmlspecialchars(json_encode($row), ENT_QUOTES, "UTF-8"); ?>'>
                                 View
                             </button>
+                            <?php if ($row['status'] === 'Checked In' || $row['status'] === 'Checked Out'): ?>
+                                <a href="../reception/print_receipt.php?id=<?php echo $row['id']; ?>" class="btn btn-outline-secondary btn-sm px-3" target="_blank">
+                                    <i class="bi bi-receipt"></i> Receipt
+                                </a>
+                            <?php endif; ?>
                         </td>
                     </tr>
                     <?php endwhile; ?>

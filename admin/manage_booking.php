@@ -12,7 +12,8 @@ $isEdit = $id > 0;
 
 $errors = [];
 $booking = [
-    'name' => '', 'email' => '', 'address' => '', 'room_type' => '',
+    'name' => '', 'email' => '', 'contact' => '', 'address' => '', 'room_type' => '',
+    'cottage_type' => 'None', 'pax' => '1-6',
     'checkin_date' => '', 'checkout_date' => '', 'payment_method' => '',
     'total_price' => '', 'status' => 'Pending'
 ];
@@ -35,8 +36,11 @@ if ($isEdit) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $booking['name']           = trim($_POST['name'] ?? '');
     $booking['email']          = trim($_POST['email'] ?? '');
+    $booking['contact']        = trim($_POST['contact'] ?? '');
     $booking['address']        = trim($_POST['address'] ?? '');
     $booking['room_type']      = trim($_POST['room_type'] ?? '');
+    $booking['cottage_type']   = $_POST['cottage_type'] ?? 'None';
+    $booking['pax']            = $_POST['pax'] ?? '1-6';
     $booking['checkin_date']   = trim($_POST['checkin_date'] ?? '');
     $booking['checkout_date']  = trim($_POST['checkout_date'] ?? '');
     $booking['payment_method'] = trim($_POST['payment_method'] ?? '');
@@ -44,6 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($booking['name'] === '') $errors[] = "Guest name is required.";
     if ($booking['email'] === '' || !filter_var($booking['email'], FILTER_VALIDATE_EMAIL)) $errors[] = "A valid email is required.";
+    if ($booking['contact'] === '') $errors[] = "A contact number is required for the front desk.";
     if ($booking['room_type'] === '') $errors[] = "Room type is required.";
     if ($booking['checkin_date'] === '') $errors[] = "Check-in date is required.";
     if ($booking['checkout_date'] === '') $errors[] = "Check-out date is required.";
@@ -57,11 +62,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($errors)) {
         if ($isEdit) {
             $stmt = $conn->prepare(
-                "UPDATE bookings SET name=?, email=?, address=?, room_type=?, checkin_date=?, checkout_date=?, payment_method=?, total_price=? WHERE id=?"
+                "UPDATE bookings SET name=?, email=?, contact=?, address=?, room_type=?, cottage_type=?, pax=?, checkin_date=?, checkout_date=?, payment_method=?, total_price=? WHERE id=?"
             );
             $stmt->bind_param(
-                "sssssssdi",
-                $booking['name'], $booking['email'], $booking['address'], $booking['room_type'],
+                "ssssssssssdi",
+                $booking['name'], $booking['email'], $booking['contact'], $booking['address'], $booking['room_type'],
+                $booking['cottage_type'], $booking['pax'],
                 $booking['checkin_date'], $booking['checkout_date'], $booking['payment_method'],
                 $totalPrice, $id
             );
@@ -75,11 +81,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $status = 'Pending';
             $stmt = $conn->prepare(
-                "INSERT INTO bookings (name, email, address, room_type, checkin_date, checkout_date, payment_method, total_price, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                "INSERT INTO bookings (name, email, contact, address, room_type, cottage_type, pax, checkin_date, checkout_date, payment_method, total_price, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
             );
             $stmt->bind_param(
-                "sssssssds",
-                $booking['name'], $booking['email'], $booking['address'], $booking['room_type'],
+                "ssssssssssds",
+                $booking['name'], $booking['email'], $booking['contact'], $booking['address'], $booking['room_type'],
+                $booking['cottage_type'], $booking['pax'],
                 $booking['checkin_date'], $booking['checkout_date'], $booking['payment_method'],
                 $totalPrice, $status
             );
@@ -159,10 +166,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <nav class="nav flex-column">
         <a class="nav-link active" href="admin.php"><span>Pending Bookings</span></a>
         <a class="nav-link" href="approve.php"><span>Approved History</span></a>
-        <a class="nav-link" href="admin_history.php"><span>Cancellation History</span></a>
+        <a class="nav-link" href="admin_cancelled.php"><span>Cancellation History</span></a>
         <a class="nav-link" href="admin_announcements.php"><span>Announcements</span></a>
         <a class="nav-link" href="admin_analytics.php"><span>Analytics</span></a>
         <hr style="border-color: rgba(255,255,255,0.1); margin: 20px 0;">
+        <a class="nav-link text-info" href="../reception/index.php"><span>🛎 Front Desk</span></a>
         <a class="nav-link text-warning" href="../index.php" target="_blank"><span>← View Website</span></a>
         <a class="nav-link text-danger" href="logout.php"><span>Logout</span></a>
     </nav>
@@ -192,6 +200,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <label class="form-label">Email</label>
                     <input type="email" name="email" class="form-control" value="<?php echo htmlspecialchars($booking['email']); ?>" required>
                 </div>
+                <div class="col-md-6">
+                    <label class="form-label">Contact Number</label>
+                    <input type="text" name="contact" class="form-control" value="<?php echo htmlspecialchars($booking['contact'] ?? ''); ?>" placeholder="+63 9XX XXX XXXX" required>
+                </div>
                 <div class="col-12">
                     <label class="form-label">Address</label>
                     <input type="text" name="address" class="form-control" value="<?php echo htmlspecialchars($booking['address'] ?? ''); ?>">
@@ -201,8 +213,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <input type="text" name="room_type" class="form-control" value="<?php echo htmlspecialchars($booking['room_type']); ?>" required>
                 </div>
                 <div class="col-md-6">
+                    <label class="form-label">Cottage Type</label>
+                    <select name="cottage_type" class="form-select">
+                        <?php foreach (['None', 'Cottage 6', 'Cottage 400', 'Cottage 600'] as $opt): ?>
+                            <option value="<?php echo $opt; ?>" <?php echo ($booking['cottage_type'] ?? 'None') === $opt ? 'selected' : ''; ?>><?php echo $opt; ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Number of Guests (Pax)</label>
+                    <select name="pax" class="form-select">
+                        <?php foreach (['1-6', '7-15', '16-30', '31-50', '50+'] as $opt): ?>
+                            <option value="<?php echo $opt; ?>" <?php echo ($booking['pax'] ?? '1-6') === $opt ? 'selected' : ''; ?>><?php echo $opt; ?> pax</option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="col-md-6">
                     <label class="form-label">Payment Method</label>
-                    <input type="text" name="payment_method" class="form-control" value="<?php echo htmlspecialchars($booking['payment_method'] ?? ''); ?>">
+                    <select name="payment_method" class="form-select">
+                        <?php foreach (['Cash', 'GCash'] as $opt): ?>
+                            <option value="<?php echo $opt; ?>" <?php echo ($booking['payment_method'] ?? '') === $opt ? 'selected' : ''; ?>><?php echo $opt; ?></option>
+                        <?php endforeach; ?>
+                    </select>
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Check-in Date</label>

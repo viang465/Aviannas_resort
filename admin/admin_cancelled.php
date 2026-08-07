@@ -3,232 +3,109 @@ session_start();
 include "../conn.php"; 
 
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
-    header("Location: login.php");
-    exit();
+    exit("Unauthorized Access");
 }
 
-$sql = "SELECT * FROM deleted_bookings ORDER BY deletion_date DESC";
-$result = $conn->query($sql);
+$error_message = "";
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['booking_id'])) {
+    $id = intval($_POST['booking_id']);
+
+    // Fetch guest details before archiving
+    $guest = null;
+    $lookup = $conn->prepare("SELECT name, email, contact, address, room_type, checkin_date, checkout_date FROM bookings WHERE id = ?");
+    $lookup->bind_param("i", $id);
+    $lookup->execute();
+    $guest = $lookup->get_result()->fetch_assoc();
+    $lookup->close();
+
+    // Use transaction to ensure safe copy and move
+    $conn->begin_transaction();
+
+    try {
+        $copySql = "INSERT INTO deleted_bookings (name, email, contact, address, room_type, checkin_date, checkout_date, deletion_date) 
+                    SELECT name, email, contact, address, room_type, checkin_date, checkout_date, NOW() 
+                    FROM bookings WHERE id = ?";
+        
+        $stmt = $conn->prepare($copySql);
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+        $stmt->close();
+
+        $delStmt = $conn->prepare("DELETE FROM bookings WHERE id = ?");
+        $delStmt->bind_param("i", $id);
+        $delStmt->execute();
+        $delStmt->close();
+
+        $conn->commit();
+
+        // Notify guest
+        if ($guest && !empty($guest['email'])) {
+            $to = $guest['email'];
+            $subject = "Reservation Cancelled - Avianna's Inland Resort";
+
+            $headers  = "MIME-Version: 1.0\r\n";
+            $headers .= "Content-type:text/html;charset=UTF-8\r\n";
+            $headers .= "From: reservations@aviannasresort.com\r\n";
+
+            $message = "
+            <html>
+            <body style='font-family: Arial, sans-serif; color:#2d3748;'>
+                <h2 style='color:#c53030;'>Reservation Cancelled</h2>
+                <p>Dear " . htmlspecialchars($guest['name']) . ",</p>
+                <p>This is to confirm that your reservation has been cancelled and archived. Details below:</p>
+                <table style='border-collapse: collapse; margin-top:10px;'>
+                    <tr><td style='padding:4px 10px;font-weight:bold;'>Room Type:</td><td style='padding:4px 10px;'>" . htmlspecialchars($guest['room_type']) . "</td></tr>
+                    <tr><td style='padding:4px 10px;font-weight:bold;'>Check-in:</td><td style='padding:4px 10px;'>" . htmlspecialchars($guest['checkin_date']) . "</td></tr>
+                    <tr><td style='padding:4px 10px;font-weight:bold;'>Check-out:</td><td style='padding:4px 10px;'>" . htmlspecialchars($guest['checkout_date']) . "</td></tr>
+                </table>
+                <p style='margin-top:15px;'>If this was a mistake or you'd like to rebook, please contact us directly.</p>
+            </body>
+            </html>";
+
+            @mail($to, $subject, $message, $headers);
+        }
+
+        header("Location: admin.php?cancel=success");
+        exit();
+
+    } catch (Exception $e) {
+        $conn->rollback();
+        $error_message = "Archiving Failed: " . $e->getMessage();
+    }
+}
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cancellation History | Avianna's Admin</title>
-    
+    <title>Processing Cancellation - Avianna's</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-
     <style>
-        :root { 
-            --primary-green: #1e4d40; 
-            --accent-teal: #2c7a7b; 
-            --sidebar-width: 260px;
-            --bg-light: #fcfcfc;
-            --cancel-red: #c53030;
-        }
-
-        body { 
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg-light);
-            margin: 0;
-        }
-
-        #scrollUp, .scroll-to-top, .back-to-top, [id*="scroll"], .tp-top-arrow, button[title*="top"], .scrollup {
-            display: none !important;
-            visibility: hidden !important;
-            opacity: 0 !important;
-            pointer-events: none !important;
-        }
-
-        .sidebar { 
-            height: 100vh; 
-            background: linear-gradient(180deg, var(--primary-green) 0%, #0a1a16 100%); 
-            color: white; 
-            position: fixed; 
-            width: var(--sidebar-width); 
-            padding: 25px 20px;
-            box-shadow: 4px 0 10px rgba(0,0,0,0.1);
-            z-index: 1000;
-        }
-
-        .sidebar h4 {
-            font-weight: 700;
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
-        .nav-link { 
-            color: rgba(255,255,255,0.7); 
-            margin-bottom: 8px; 
-            padding: 12px 15px;
-            border-radius: 8px; 
-            font-weight: 500;
-            transition: all 0.3s ease;
-            text-decoration: none;
-            display: block;
-        }
-
-        .nav-link:hover { 
-            color: white; 
-            background: rgba(255,255,255,0.1); 
-            transform: translateX(5px);
-        }
-
-        .nav-link.active { 
-            color: white; 
-            background: var(--accent-teal); 
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-        }
-
-        .main-content { 
-            margin-left: var(--sidebar-width); 
-            padding: 40px; 
-            min-height: 100vh; 
-        }
-
-        .header-box {
-            background: #fff;
-            padding: 20px;
-            border-radius: 12px;
-            border-left: 6px solid var(--cancel-red);
-            box-shadow: 0 2px 10px rgba(0,0,0,0.03);
-            margin-bottom: 30px;
-        }
-
-        .header-box h2 {
-            color: var(--primary-green);
-            font-weight: 700;
-            margin: 0;
-        }
-
-        .table-card { 
-            background: white; 
-            border-radius: 15px; 
-            box-shadow: 0 10px 30px rgba(0,0,0,0.05); 
-            overflow: hidden;
-        }
-
-        .table thead th {
-            background-color: #fdfdfd;
-            color: #8898aa;
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            padding: 20px;
-            border-bottom: 1px solid #f1f1f1;
-        }
-
-        .table tbody td {
-            padding: 20px;
-            border-bottom: 1px solid #f8f9fa;
-        }
-
-        .guest-name { color: #32325d; font-weight: 600; display: block; }
-
-        .stay-period {
-            background: #f4f6f9;
-            padding: 3px 8px;
-            border-radius: 4px;
-            font-size: 0.85rem;
-            color: #525f7f;
-        }
-
-        .badge-cancelled { 
-            background: #fff5f5; 
-            color: var(--cancel-red); 
-            font-weight: 600; 
-            padding: 6px 12px; 
-            border-radius: 6px; 
-            font-size: 0.8rem;
-            border: 1px solid #feb2b2;
-        }
-
-        .text-muted-small { font-size: 0.8rem; color: #8898aa; }
-
-        @media (max-width: 992px) {
-            .sidebar { width: 80px; padding: 20px 10px; }
-            .sidebar h4, .nav-link span { display: none; }
-            .main-content { margin-left: 80px; }
-        }
+        body { background-color: #f4f7f6; height: 100vh; display: flex; align-items: center; justify-content: center; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .process-card { background: white; padding: 40px; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); text-align: center; max-width: 450px; width: 90%; }
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #dc3545; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 20px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .btn-return { background-color: #1e4d40; color: white; border-radius: 10px; padding: 10px 25px; text-decoration: none; display: inline-block; }
     </style>
 </head>
 <body>
 
-<div class="sidebar">
-    <h4>Avianna's Admin</h4>
-    <hr style="border-color: rgba(255,255,255,0.1);">
-    <nav class="nav flex-column">
-        <a class="nav-link" href="admin.php"><span>Pending Bookings</span></a>
-        <a class="nav-link" href="approve.php"><span>Approved History</span></a>
-        <a class="nav-link active" href="admin_history.php"><span>Cancellation History</span></a>
-        <a class="nav-link" href="admin_announcements.php"><span>Announcements</span></a>
-        <a class="nav-link" href="admin_analytics.php"><span>Dashboard</span></a>
-        <hr style="border-color: rgba(255,255,255,0.1); margin: 20px 0;">
-        <a class="nav-link text-warning" href="../index.php" target="_blank"><span>← View Website</span></a>
-        <a class="nav-link text-danger" href="logout.php"><span>Logout</span></a>
-    </nav>
+<div class="process-card">
+    <?php if ($error_message): ?>
+        <div class="text-danger mb-4">
+            <h4>Processing Error</h4>
+            <p class="text-muted"><?php echo htmlspecialchars($error_message); ?></p>
+        </div>
+        <a href="admin.php" class="btn-return">Return to Dashboard</a>
+    <?php else: ?>
+        <div class="loader"></div>
+        <h4>Archiving Booking</h4>
+        <p class="text-muted small">Moving record to cancellation history...</p>
+        <script>setTimeout(function(){ window.location.href = 'admin.php'; }, 2000);</script>
+    <?php endif; ?>
 </div>
-
-<div class="main-content">
-    <div class="header-box">
-        <h2>Cancellation History</h2>
-        <p class="text-muted mb-0 small">Archived records of deleted or cancelled reservations.</p>
-    </div>
-
-    <div class="table-card">
-        <table class="table table-hover align-middle mb-0">
-            <thead>
-                <tr>
-                    <th>Guest Information</th>
-                    <th>Room Type</th>
-                    <th>Booking Dates</th>
-                    <th>Deletion Timestamp</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php if ($result && $result->num_rows > 0): ?>
-                    <?php while($row = $result->fetch_assoc()): ?>
-                    <tr>
-                        <td>
-                            <span class="guest-name"><?php echo htmlspecialchars($row['name']); ?></span>
-                            <span class="text-muted-small"><?php echo htmlspecialchars($row['email']); ?></span>
-                        </td>
-                        <td>
-                            <span class="text-muted-small"><?php echo htmlspecialchars($row['contact'] ?? 'N/A'); ?></span>
-                        </td>
-                        <td>
-                            <span class="fw-medium"><?php echo htmlspecialchars($row['room_type']); ?></span>
-                        </td>
-                        <td>
-                            <span class="stay-period">
-                                <?php echo date('M d', strtotime($row['checkin_date'])) . " — " . date('M d, Y', strtotime($row['checkout_date'])); ?>
-                            </span>
-                        </td>
-                        <td>
-                            <span class="badge-cancelled">
-                                🗑 <?php echo date('M d, Y | h:i A', strtotime($row['deletion_date'])); ?>
-                            </span>
-                        </td>
-                    </tr>
-                    <?php endwhile; ?>
-                <?php else: ?>
-                    <tr>
-                        <td colspan="4" class="text-center py-5">
-                            <div class="text-muted">
-                                <p class="mb-0">The archive is currently empty.</p>
-                            </div>
-                        </td>
-                    </tr>
-                <?php endif; ?>
-            </tbody>
-        </table>
-    </div>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 </body>
 </html>

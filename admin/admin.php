@@ -7,7 +7,10 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
     exit();
 }
 
-$sql = "SELECT * FROM bookings WHERE (status != 'Approved' OR status IS NULL) ORDER BY checkin_date ASC";
+// Only bookings actually awaiting an admin decision — bookings that have
+// moved into the reception flow (Checked In / Checked Out) belong on the
+// Approved History page instead, not here.
+$sql = "SELECT * FROM bookings WHERE status = 'Pending' OR status IS NULL ORDER BY checkin_date ASC";
 $result = $conn->query($sql);
 
 $bannerMsg = "";
@@ -154,10 +157,11 @@ if (isset($_GET['approve']) && $_GET['approve'] === 'success') $bannerMsg = "Boo
     <nav class="nav flex-column">
         <a class="nav-link active" href="admin.php"><span>Pending Bookings</span></a>
         <a class="nav-link" href="approve.php"><span>Approved History</span></a>
-        <a class="nav-link" href="admin_history.php"><span>Cancellation History</span></a>
+        <a class="nav-link" href="admin_cancelled.php"><span>Cancellation History</span></a>
         <a class="nav-link" href="admin_announcements.php"><span>Announcements</span></a>
         <a class="nav-link" href="admin_analytics.php"><span>Dashboard</span></a>
         <hr style="border-color: rgba(255,255,255,0.1); margin: 20px 0;">
+        <a class="nav-link text-info" href="../reception/index.php"><span>🛎 Front Desk</span></a>
         <a class="nav-link text-warning" href="../index.php" target="_blank"><span>← View Website</span></a>
         <a class="nav-link text-danger" href="logout.php"><span>Logout</span></a>
     </nav>
@@ -183,7 +187,7 @@ if (isset($_GET['approve']) && $_GET['approve'] === 'success') $bannerMsg = "Boo
             <thead>
                 <tr>
                     <th>Guest Details</th>
-                    <th>Contact Information</th>
+                    <th>Contact Number</th>
                     <th>Room Type</th>
                     <th>Check-in</th>
                     <th>Check-out</th>
@@ -197,8 +201,6 @@ if (isset($_GET['approve']) && $_GET['approve'] === 'success') $bannerMsg = "Boo
                     <tr>
                         <td>
                             <span class="guest-name"><?php echo htmlspecialchars($row['name']); ?></span>
-                        </td>
-                        <td>
                             <span class="guest-email"><?php echo htmlspecialchars($row['email'] ?? 'N/A'); ?></span>
                         </td>
                         <td>
@@ -236,7 +238,7 @@ if (isset($_GET['approve']) && $_GET['approve'] === 'success') $bannerMsg = "Boo
                     <?php endwhile; ?>
                 <?php else: ?>
                     <tr>
-                        <td colspan="6" class="text-center py-5">
+                        <td colspan="7" class="text-center py-5">
                             <img src="https://cdn-icons-png.flaticon.com/512/4076/4076549.png" width="60" class="opacity-25 mb-3" alt="empty">
                             <p class="text-muted mb-0">No pending reservations found.</p>
                         </td>

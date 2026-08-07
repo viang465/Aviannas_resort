@@ -34,7 +34,7 @@ if (isset($_GET['export']) && $_GET['export'] == 'csv') {
         FROM bookings
         WHERE MONTH(checkin_date) = ?
           AND YEAR(checkin_date) = ?
-          AND status IN ('Approved','Booked')
+          AND status IN ('Approved', 'Checked In', 'Checked Out')
         GROUP BY week_num ORDER BY week_num ASC
     ");
     $exportStats->bind_param("ii", $selectedMonth, $selectedYear);
@@ -64,7 +64,7 @@ $res = $conn->query("SELECT COUNT(*) as total FROM bookings WHERE status = 'Pend
 if ($res) $pendingCount = $res->fetch_assoc()['total'] ?? 0;
 
 $approvedCount = 0;
-$res = $conn->query("SELECT COUNT(*) as total FROM bookings WHERE status IN ('Approved','Booked')");
+$res = $conn->query("SELECT COUNT(*) as total FROM bookings WHERE status IN ('Approved', 'Checked In', 'Checked Out')");
 if ($res) $approvedCount = $res->fetch_assoc()['total'] ?? 0;
 
 $archivedCount = 0;
@@ -72,14 +72,14 @@ $res = $conn->query("SELECT COUNT(*) as total FROM deleted_bookings");
 if ($res) $archivedCount = $res->fetch_assoc()['total'] ?? 0;
 
 $totalRevenue = 0;
-$res = $conn->query("SELECT SUM(total_price) as total_rev FROM bookings WHERE status IN ('Approved','Booked')");
+$res = $conn->query("SELECT SUM(total_price) as total_rev FROM bookings WHERE status IN ('Approved', 'Checked In', 'Checked Out')");
 if ($res) $totalRevenue = $res->fetch_assoc()['total_rev'] ?? 0;
 
 $selectedMonthRevenue = 0;
 $stmt = $conn->prepare("
     SELECT SUM(total_price) as month_rev FROM bookings
     WHERE MONTH(checkin_date) = ? AND YEAR(checkin_date) = ?
-      AND status IN ('Approved','Booked')
+      AND status IN ('Approved', 'Checked In', 'Checked Out')
 ");
 $stmt->bind_param("ii", $selectedMonth, $selectedYear);
 $stmt->execute();
@@ -91,7 +91,7 @@ $weeklyStats = $conn->prepare("
            COUNT(*) as total_bookings,
            SUM(total_price) as week_inflow
     FROM bookings
-    WHERE MONTH(checkin_date) = ? AND YEAR(checkin_date) = ? AND status IN ('Approved','Booked')
+    WHERE MONTH(checkin_date) = ? AND YEAR(checkin_date) = ? AND status IN ('Approved', 'Checked In', 'Checked Out')
     GROUP BY week_num ORDER BY week_num ASC
 ");
 $weeklyStats->bind_param("ii", $selectedMonth, $selectedYear);
@@ -189,10 +189,11 @@ if ($weeklyStats) {
     <nav class="nav flex-column">
         <a class="nav-link" href="admin.php"><span>Pending Bookings</span></a>
         <a class="nav-link" href="approve.php"><span>Approved History</span></a>
-        <a class="nav-link" href="admin_history.php"><span>Cancellation History</span></a>
+        <a class="nav-link" href="admin_cancelled.php"><span>Cancellation History</span></a>
         <a class="nav-link" href="admin_announcements.php"><span>Announcements</span></a>
         <a class="nav-link active" href="admin_analytics.php"><span>Dashboard</span></a>
         <hr style="border-color: rgba(255,255,255,0.1); margin: 20px 0;">
+        <a class="nav-link text-info" href="../reception/index.php"><span>🛎 Front Desk</span></a>
         <a class="nav-link text-warning" href="../index.php" target="_blank"><span>← View Website</span></a>
         <a class="nav-link text-danger" href="logout.php"><span>Logout</span></a>
     </nav>
@@ -209,14 +210,14 @@ if ($weeklyStats) {
     <div class="row">
         <div class="col-md-3">
             <div class="stat-card revenue">
-                <div class="text-muted small fw-bold mb-1">TOTAL REVENUE</div>
+                <div class="text-muted small fw-bold mb-1">TOTAL SALES</div>
                 <h3 class="text-success fw-bold">₱<?= number_format($totalRevenue, 2) ?></h3>
-                <small class="text-muted">All approved bookings</small>
+                <small class="text-muted">Approved, checked in & checked out</small>
             </div>
         </div>
         <div class="col-md-3">
             <div class="stat-card revenue">
-                <div class="text-muted small fw-bold mb-1">SELECTED MONTH'S REVENUE</div>
+                <div class="text-muted small fw-bold mb-1">SELECTED MONTH'S SALES</div>
                 <h3 class="text-success fw-bold">₱<?= number_format($selectedMonthRevenue, 2) ?></h3>
                 <small class="text-muted"><?= date('F Y', mktime(0, 0, 0, $selectedMonth, 1, $selectedYear)) ?></small>
             </div>
@@ -230,9 +231,9 @@ if ($weeklyStats) {
         </div>
         <div class="col-md-3">
             <div class="stat-card bookings">
-                <div class="text-muted small fw-bold mb-1">APPROVED / BOOKED</div>
+                <div class="text-muted small fw-bold mb-1">APPROVED / ACTIVE</div>
                 <h3 class="text-dark fw-bold"><?= (int)$approvedCount ?></h3>
-                <small class="text-muted">Confirmed reservations</small>
+                <small class="text-muted">Confirmed, in-house & completed stays</small>
             </div>
         </div>
     </div>
@@ -281,7 +282,6 @@ if ($weeklyStats) {
                 <tr>
                     <th>Week</th>
                     <th>Bookings</th>
-                    <th>Guests</th>
                     <th>Gross Revenue</th>
                 </tr>
             </thead>
@@ -290,7 +290,6 @@ if ($weeklyStats) {
                 <tr>
                     <td><?= htmlspecialchars($w['week']) ?></td>
                     <td><?= htmlspecialchars($w['bookings']) ?></td>
-                    <td><?= htmlspecialchars($w['guests']) ?? '0' ?></td>
                     <td class="text-success fw-semibold">₱<?= number_format($w['revenue'], 2) ?></td>
                 </tr>
                 <?php endforeach; ?>

@@ -195,10 +195,11 @@ $result = $conn->query($sql);
     <nav class="nav flex-column">
         <a class="nav-link" href="admin.php"><span>Pending Bookings</span></a>
         <a class="nav-link" href="approve.php"><span>Approved History</span></a>
-        <a class="nav-link" href="admin_history.php"><span>Cancellation History</span></a>
+        <a class="nav-link" href="admin_cancelled.php"><span>Cancellation History</span></a>
         <a class="nav-link active" href="admin_announcements.php"><span>Announcements</span></a>
-        <a class="nav-link" href="admin_analytics.php"><span>Analytics</span></a>
+        <a class="nav-link" href="admin_analytics.php"><span>Dashboard</span></a>
         <hr style="border-color: rgba(255,255,255,0.1); margin: 20px 0;">
+        <a class="nav-link text-info" href="../reception/index.php"><span>🛎 Front Desk</span></a>
         <a class="nav-link text-warning" href="../index.php" target="_blank"><span>← View Website</span></a>
         <a class="nav-link text-danger" href="logout.php"><span>Logout</span></a>
     </nav>

@@ -32,28 +32,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // 3. Automated Email Notification
             $to = $guest['email'];
-            $subject = "Reservation Approved - Avianna's Inland Resort";
 
-            $headers  = "MIME-Version: 1.0\r\n";
-            $headers .= "Content-type:text/html;charset=UTF-8\r\n";
-            $headers .= "From: reservations@aviannasresort.com\r\n";
+            if (!empty($to)) {
+                $subject = "Reservation Approved - Avianna's Inland Resort";
 
-            $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://';
-            $baseUrl  = $protocol . $_SERVER['HTTP_HOST'] . dirname(dirname($_SERVER['SCRIPT_NAME']));
-            $confirmationLink = $baseUrl . '/confirmation.php?id=' . $id;
+                $headers  = "MIME-Version: 1.0\r\n";
+                $headers .= "Content-type:text/html;charset=UTF-8\r\n";
+                $headers .= "From: reservations@aviannasresort.com\r\n";
 
-            $message = "
-            <html>
-            <body style='font-family: Arial, sans-serif;'>
-                <h2>Reservation Confirmed!</h2>
-                <p>Dear " . htmlspecialchars($guest['name']) . ",</p>
-                <p>Your booking for a <strong>" . htmlspecialchars($guest['room_type']) . "</strong> from <strong>" . htmlspecialchars($guest['checkin_date']) . "</strong> to <strong>" . htmlspecialchars($guest['checkout_date']) . "</strong> has been officially approved.</p>
-                <p>You can view or print your booking confirmation here: <a href='" . $confirmationLink . "'>View Confirmation</a></p>
-                <p>We look forward to welcoming you to Avianna's Inland Resort!</p>
-            </body>
-            </html>";
+                $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://';
+                $baseUrl  = rtrim($protocol . $_SERVER['HTTP_HOST'] . dirname(dirname($_SERVER['SCRIPT_NAME'])), '/');
+                $confirmationLink = $baseUrl . '/confirmation.php?id=' . $id;
 
-            @mail($to, $subject, $message, $headers);
+                $message = "
+                <html>
+                <body style='font-family: Arial, sans-serif;'>
+                    <h2>Reservation Confirmed!</h2>
+                    <p>Dear " . htmlspecialchars($guest['name']) . ",</p>
+                    <p>Your booking for a <strong>" . htmlspecialchars($guest['room_type']) . "</strong> from <strong>" . htmlspecialchars($guest['checkin_date']) . "</strong> to <strong>" . htmlspecialchars($guest['checkout_date']) . "</strong> has been officially approved.</p>
+                    <p>You can view or print your booking confirmation here: <a href='" . $confirmationLink . "'>View Confirmation</a></p>
+                    <p>We look forward to welcoming you to Avianna's Inland Resort!</p>
+                </body>
+                </html>";
+
+                @mail($to, $subject, $message, $headers);
+            }
 
             header("Location: admin.php?approve=success");
             exit();
