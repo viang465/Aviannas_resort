@@ -12,9 +12,15 @@ if ($booking_id > 0) {
     $stmt->execute();
     $guest = $stmt->get_result()->fetch_assoc();
     $stmt->close();
+
+    if (!$guest) {
+        $error = "Booking #{$booking_id} was not found.";
+    } elseif ($guest['status'] !== 'Checked In') {
+        $error = "This guest is not currently checked in (status: {$guest['status']}).";
+    }
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $guest && $guest['status'] === 'Checked In') {
     $incidentals = floatval($_POST['incidentals'] ?? 0);
     $final_total = floatval($guest['total_price']) + $incidentals;
 
@@ -51,9 +57,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <h4 class="fw-bold mb-0">Express Check-Out</h4>
     </div>
 
-    <?php if (!$guest): ?>
-        <div class="alert alert-warning text-center">Guest record not found. <a href="index.php">Return to dashboard</a>.</div>
-    <?php else: ?>
+    <?php if ($error): ?>
+        <div class="alert alert-warning text-center">
+            <?php echo htmlspecialchars($error); ?>
+            <?php if ($guest && $guest['status'] === 'Checked Out'): ?>
+                <div class="mt-2"><a href="print_receipt.php?id=<?php echo $guest['id']; ?>" class="btn btn-sm btn-outline-secondary rounded-pill">View Receipt</a></div>
+            <?php endif; ?>
+        </div>
+    <?php endif; ?>
+
+    <?php if ($guest && $guest['status'] === 'Checked In'): ?>
         <div class="card card-custom p-4">
             <h5 class="fw-bold text-dark border-bottom pb-2"><i class="bi bi-box-arrow-right me-2 text-warning"></i> Checkout Confirmation</h5>
             
@@ -74,6 +87,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <button type="submit" class="btn btn-warning w-100 py-2 fw-bold text-dark">Complete Check-Out & Generate Invoice</button>
             </form>
         </div>
+    <?php elseif (!$error): ?>
+        <div class="alert alert-warning text-center">Guest record not found. <a href="index.php">Return to dashboard</a>.</div>
     <?php endif; ?>
 </div>
 

@@ -55,7 +55,7 @@ if (!$booking) {
         <p class="small mb-0">Zone 6 Cabugao Sur Sta. Barbara, Iloilo</p>
         <p class="small mb-0">Contact: +1 234 567 890</p>
         <hr style="border-top: 2px dashed #000;">
-        <h5 class="fw-bold mt-2">OFFICIAL RECEIPT</h5>
+        <h5 class="fw-bold mt-2"><?php echo $booking['status'] === 'Checked Out' ? 'OFFICIAL RECEIPT' : 'CHECK-IN CONFIRMATION'; ?></h5>
         <p class="small">Receipt No: <strong>#REC-<?php echo str_pad($booking['id'], 5, '0', STR_PAD_LEFT); ?></strong></p>
     </div>
 
@@ -64,6 +64,7 @@ if (!$booking) {
         <p class="mb-1"><strong>Guest:</strong> <?php echo htmlspecialchars($booking['name']); ?></p>
         <p class="mb-1"><strong>Contact:</strong> <?php echo htmlspecialchars($booking['contact']); ?></p>
         <p class="mb-1"><strong>Payment Method:</strong> <?php echo htmlspecialchars($booking['payment_method']); ?></p>
+        <p class="mb-1"><strong>Status:</strong> <?php echo htmlspecialchars($booking['status']); ?></p>
     </div>
 
     <hr style="border-top: 1px dashed #000;">
@@ -96,7 +97,7 @@ if (!$booking) {
     <hr style="border-top: 1px dashed #000;">
 
     <div class="d-flex justify-content-between fw-bold fs-5 my-2">
-        <span>TOTAL PAID:</span>
+        <span><?php echo $booking['status'] === 'Checked Out' ? 'TOTAL PAID:' : 'TOTAL DUE:'; ?></span>
         <span>₱<?php echo number_format($booking['total_price'], 2); ?></span>
     </div>
 

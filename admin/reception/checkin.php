@@ -15,6 +15,15 @@ if ($prefill_id > 0) {
     $stmt->execute();
     $guest = $stmt->get_result()->fetch_assoc();
     $stmt->close();
+
+    if (!$guest) {
+        $error = "Booking #{$prefill_id} was not found. You can register a walk-in guest below.";
+    } elseif ($guest['status'] === 'Checked In') {
+        $error = "Booking #{$prefill_id} is already checked in.";
+    } elseif ($guest['status'] === 'Checked Out') {
+        $error = "Booking #{$prefill_id} has already checked out.";
+        $guest = null;
+    }
 }
 
 // Handle Form Submission (Walk-in or Status Update)
@@ -147,6 +156,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </select>
                 </div>
                 <div class="col-md-6">
+                    <label class="form-label">Number of Guests (Pax)</label>
+                    <select name="pax" class="form-select">
+                        <option value="1-6">1 - 6 pax</option>
+                        <option value="7-15">7 - 15 pax</option>
+                        <option value="16-30">16 - 30 pax</option>
+                        <option value="31-50">31 - 50 pax</option>
+                        <option value="50+">50+ pax</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Payment Method</label>
+                    <select name="payment_method" class="form-select">
+                        <option value="Cash">Cash</option>
+                        <option value="GCash">GCash</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
                     <label class="form-label">Check-In Date</label>
                     <input type="date" name="checkin_date" class="form-control" value="<?php echo date('Y-m-d'); ?>">
                 </div>
@@ -157,13 +183,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="col-md-6">
                     <label class="form-label fw-bold">Total Bill (₱)</label>
                     <input type="number" step="0.01" name="total_price" class="form-control" required placeholder="0.00">
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">Payment Method</label>
-                    <select name="payment_method" class="form-select">
-                        <option value="Cash">Cash</option>
-                        <option value="GCash">GCash</option>
-                    </select>
                 </div>
                 <div class="col-12 mt-4">
                     <button type="submit" class="btn btn-success w-100 py-2 fw-bold">Process Check-In & Print Receipt</button>

@@ -1,34 +1,20 @@
 <?php
 session_start();
-// Adjust path to root connection file
-require_once '../../conn.php';
+require_once '../conn.php';
 
 $message = "";
 $error = "";
 
-// Handle Quick Check-In / Status Update
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
-    $booking_id = intval($_POST['booking_id'] ?? 0);
-    
-    if ($_POST['action'] === 'check_in') {
-        $stmt = $conn->prepare("UPDATE bookings SET status = 'Checked In' WHERE id = ?");
-        $stmt->bind_param("i", $booking_id);
-        if ($stmt->execute()) {
-            $message = "Guest successfully checked in!";
-        } else {
-            $error = "Failed to update check-in status.";
-        }
-        $stmt->close();
-    } elseif ($_POST['action'] === 'check_out') {
-        $stmt = $conn->prepare("UPDATE bookings SET status = 'Checked Out' WHERE id = ?");
-        $stmt->bind_param("i", $booking_id);
-        if ($stmt->execute()) {
-            $message = "Guest successfully checked out!";
-        } else {
-            $error = "Failed to update check-out status.";
-        }
-        $stmt->close();
+// Messages passed back from checkin.php / checkout.php after a successful action
+if (isset($_GET['msg'])) {
+    if ($_GET['msg'] === 'checked_in') {
+        $message = "Guest successfully checked in!";
+    } elseif ($_GET['msg'] === 'checked_out') {
+        $message = "Guest successfully checked out!";
     }
+}
+if (isset($_GET['err'])) {
+    $error = "Something went wrong processing that request. Please try again.";
 }
 
 // Fetch Today's & Active Bookings
@@ -37,8 +23,9 @@ $search = trim($_GET['search'] ?? '');
 
 if (!empty($search)) {
     $search_param = "%{$search}%";
+    $search_id = ctype_digit($search) ? intval($search) : 0;
     $stmt = $conn->prepare("SELECT * FROM bookings WHERE name LIKE ? OR email LIKE ? OR id = ? ORDER BY checkin_date ASC");
-    $stmt->bind_param("ssi", $search_param, $search_param, $search);
+    $stmt->bind_param("ssi", $search_param, $search_param, $search_id);
 } else {
     $stmt = $conn->prepare("SELECT * FROM bookings WHERE checkin_date = ? OR status = 'Checked In' ORDER BY checkin_date ASC");
     $stmt->bind_param("s", $today);
@@ -121,7 +108,10 @@ $result = $stmt->get_result();
             <p class="text-muted small mb-0">Manage today's arrivals, active guests, and quick check-ins.</p>
         </div>
         <div class="col-md-6 text-md-end">
-            <a href="../book.php" target="_blank" class="btn btn-success fw-semibold rounded-3 me-2">
+            <a href="checkin.php" class="btn btn-outline-success fw-semibold rounded-3 me-2">
+                <i class="bi bi-person-plus-fill me-1"></i> Walk-In Registration
+            </a>
+            <a href="../book.php" target="_blank" class="btn btn-success fw-semibold rounded-3">
                 <i class="bi bi-plus-lg me-1"></i> New Walk-In Booking
             </a>
         </div>
@@ -200,20 +190,19 @@ $result = $stmt->get_result();
                                     <span class="badge <?php echo $badgeClass; ?> px-2 py-1"><?php echo htmlspecialchars($st); ?></span>
                                 </td>
                                 <td class="text-end">
-                                    <form method="POST" class="d-inline">
-                                        <input type="hidden" name="booking_id" value="<?php echo $row['id']; ?>">
-                                        <?php if ($row['status'] === 'Approved' || $row['status'] === 'Pending'): ?>
-                                            <button type="submit" name="action" value="check_in" class="btn btn-sm btn-success rounded-pill px-3">
-                                                <i class="bi bi-box-arrow-in-right me-1"></i> Check In
-                                            </button>
-                                        <?php elseif ($row['status'] === 'Checked In'): ?>
-                                            <button type="submit" name="action" value="check_out" class="btn btn-sm btn-warning rounded-pill px-3">
-                                                <i class="bi bi-box-arrow-right me-1"></i> Check Out
-                                            </button>
-                                        <?php else: ?>
-                                            <button type="button" class="btn btn-sm btn-light disabled rounded-pill">Completed</button>
-                                        <?php endif; ?>
-                                    </form>
+                                    <?php if ($row['status'] === 'Approved' || $row['status'] === 'Pending'): ?>
+                                        <a href="checkin.php?id=<?php echo $row['id']; ?>" class="btn btn-sm btn-success rounded-pill px-3">
+                                            <i class="bi bi-box-arrow-in-right me-1"></i> Check In
+                                        </a>
+                                    <?php elseif ($row['status'] === 'Checked In'): ?>
+                                        <a href="checkout.php?id=<?php echo $row['id']; ?>" class="btn btn-sm btn-warning rounded-pill px-3">
+                                            <i class="bi bi-box-arrow-right me-1"></i> Check Out
+                                        </a>
+                                    <?php else: ?>
+                                        <a href="print_receipt.php?id=<?php echo $row['id']; ?>" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
+                                            <i class="bi bi-receipt me-1"></i> View Receipt
+                                        </a>
+                                    <?php endif; ?>
                                 </td>
                             </tr>
                         <?php endwhile; ?>
