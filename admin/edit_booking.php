@@ -147,12 +147,10 @@ if (!$booking) {
     <div class="mt-3">
         <div class="detail-row"><span class="detail-label">Guest</span><span class="detail-value"><?php echo htmlspecialchars($booking['name']); ?></span></div>
         <div class="detail-row"><span class="detail-label">Email</span><span class="detail-value"><?php echo htmlspecialchars($booking['email']); ?></span></div>
-        <div class="detail-row"><span class="detail-label">Contact</span><span class="detail-value"><?php echo htmlspecialchars($booking['contact']); ?></span></div>
+        <div class="detail-row"><span class="detail-label">Contact</span><span class="detail-value"><?php echo htmlspecialchars($booking['contact'] ?? 'N/A'); ?></span></div>
         <div class="detail-row"><span class="detail-label">Room Type</span><span class="detail-value"><?php echo htmlspecialchars($booking['room_type']); ?></span></div>
         <div class="detail-row"><span class="detail-label">Check-in</span><span class="detail-value"><?php echo date('M d, Y', strtotime($booking['checkin_date'])); ?></span></div>
         <div class="detail-row"><span class="detail-label">Check-out</span><span class="detail-value"><?php echo date('M d, Y', strtotime($booking['checkout_date'])); ?></span></div>
-    </div>
-
     </div>
 
     <form method="POST">

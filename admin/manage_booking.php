@@ -1,6 +1,6 @@
 <?php
 session_start();
-include "../conn.php";
+include "../conn.php"; 
 
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
     header("Location: login.php");
@@ -8,95 +8,69 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
 }
 
 $id = isset($_GET['id']) ? intval($_GET['id']) : 0;
-$isEdit = $id > 0;
+$booking = null;
+$error_msg = "";
 
-$errors = [];
-$booking = [
-    'name' => '', 'email' => '', 'contact' => '', 'address' => '', 'room_type' => '',
-    'cottage_type' => 'None', 'pax' => '1-6',
-    'checkin_date' => '', 'checkout_date' => '', 'payment_method' => '',
-    'total_price' => '', 'status' => 'Pending'
-];
-
-// Load existing booking for edit mode
-if ($isEdit) {
+if ($id > 0) {
     $stmt = $conn->prepare("SELECT * FROM bookings WHERE id = ?");
     $stmt->bind_param("i", $id);
     $stmt->execute();
-    $existing = $stmt->get_result()->fetch_assoc();
+    $booking = $stmt->get_result()->fetch_assoc();
     $stmt->close();
-
-    if (!$existing) {
-        header("Location: admin.php");
-        exit();
-    }
-    $booking = array_merge($booking, $existing);
 }
 
+// Room pricing array for automated total calculation
+$room_prices = [
+    'Standard Room' => 1500.00,
+    'Deluxe Room'   => 2500.00,
+    'Family Suite'  => 4000.00,
+    'Vip Villa'     => 6000.00
+];
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $booking['name']           = trim($_POST['name'] ?? '');
-    $booking['email']          = trim($_POST['email'] ?? '');
-    $booking['contact']        = trim($_POST['contact'] ?? '');
-    $booking['address']        = trim($_POST['address'] ?? '');
-    $booking['room_type']      = trim($_POST['room_type'] ?? '');
-    $booking['cottage_type']   = $_POST['cottage_type'] ?? 'None';
-    $booking['pax']            = $_POST['pax'] ?? '1-6';
-    $booking['checkin_date']   = trim($_POST['checkin_date'] ?? '');
-    $booking['checkout_date']  = trim($_POST['checkout_date'] ?? '');
-    $booking['payment_method'] = trim($_POST['payment_method'] ?? '');
-    $booking['total_price']    = trim($_POST['total_price'] ?? '');
+    $name           = trim($_POST['name']);
+    $email          = trim($_POST['email']);
+    $contact        = trim($_POST['contact']);
+    $address        = trim($_POST['address']);
+    $room_type      = trim($_POST['room_type']);
+    $checkin_date   = trim($_POST['checkin_date']);
+    $checkout_date  = trim($_POST['checkout_date']);
+    $payment_method = trim($_POST['payment_method']);
 
-    if ($booking['name'] === '') $errors[] = "Guest name is required.";
-    if ($booking['email'] === '' || !filter_var($booking['email'], FILTER_VALIDATE_EMAIL)) $errors[] = "A valid email is required.";
-    if ($booking['contact'] === '') $errors[] = "A contact number is required for the front desk.";
-    if ($booking['room_type'] === '') $errors[] = "Room type is required.";
-    if ($booking['checkin_date'] === '') $errors[] = "Check-in date is required.";
-    if ($booking['checkout_date'] === '') $errors[] = "Check-out date is required.";
-    if ($booking['checkin_date'] !== '' && $booking['checkout_date'] !== '' && strtotime($booking['checkout_date']) <= strtotime($booking['checkin_date'])) {
-        $errors[] = "Check-out date must be after check-in date.";
-    }
-    if ($booking['total_price'] !== '' && !is_numeric($booking['total_price'])) $errors[] = "Total price must be a number.";
+    if (empty($name) || empty($email) || empty($room_type) || empty($checkin_date) || empty($checkout_date)) {
+        $error_msg = "Please fill in all required fields.";
+    } else {
+        // Calculate days stayed
+        $start = new DateTime($checkin_date);
+        $end   = new DateTime($checkout_date);
+        $days  = max(1, $start->diff($end)->days);
+        
+        $price_per_night = $room_prices[$room_type] ?? 2000.00;
+        $total_price     = $days * $price_per_night;
 
-    $totalPrice = $booking['total_price'] === '' ? 0 : (float)$booking['total_price'];
-
-    if (empty($errors)) {
-        if ($isEdit) {
-            $stmt = $conn->prepare(
-                "UPDATE bookings SET name=?, email=?, contact=?, address=?, room_type=?, cottage_type=?, pax=?, checkin_date=?, checkout_date=?, payment_method=?, total_price=? WHERE id=?"
-            );
-            $stmt->bind_param(
-                "ssssssssssdi",
-                $booking['name'], $booking['email'], $booking['contact'], $booking['address'], $booking['room_type'],
-                $booking['cottage_type'], $booking['pax'],
-                $booking['checkin_date'], $booking['checkout_date'], $booking['payment_method'],
-                $totalPrice, $id
-            );
+        if ($id > 0) {
+            // Update existing booking
+            $stmt = $conn->prepare("UPDATE bookings SET name=?, email=?, contact=?, address=?, room_type=?, checkin_date=?, checkout_date=?, payment_method=?, total_price=? WHERE id=?");
+            $stmt->bind_param("ssssssssdi", $name, $email, $contact, $address, $room_type, $checkin_date, $checkout_date, $payment_method, $total_price, $id);
             if ($stmt->execute()) {
                 $stmt->close();
                 header("Location: admin.php?booking=updated");
                 exit();
+            } else {
+                $error_msg = "Database Error: " . $conn->error;
             }
-            $errors[] = "Database error: " . $conn->error;
-            $stmt->close();
         } else {
+            // Create new booking
             $status = 'Pending';
-            $stmt = $conn->prepare(
-                "INSERT INTO bookings (name, email, contact, address, room_type, cottage_type, pax, checkin_date, checkout_date, payment_method, total_price, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-            );
-            $stmt->bind_param(
-                "ssssssssssds",
-                $booking['name'], $booking['email'], $booking['contact'], $booking['address'], $booking['room_type'],
-                $booking['cottage_type'], $booking['pax'],
-                $booking['checkin_date'], $booking['checkout_date'], $booking['payment_method'],
-                $totalPrice, $status
-            );
+            $stmt = $conn->prepare("INSERT INTO bookings (name, email, contact, address, room_type, checkin_date, checkout_date, payment_method, total_price, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmt->bind_param("ssssssssds", $name, $email, $contact, $address, $room_type, $checkin_date, $checkout_date, $payment_method, $total_price, $status);
             if ($stmt->execute()) {
                 $stmt->close();
                 header("Location: admin.php?booking=created");
                 exit();
+            } else {
+                $error_msg = "Database Error: " . $conn->error;
             }
-            $errors[] = "Database error: " . $conn->error;
-            $stmt->close();
         }
     }
 }
@@ -106,157 +80,78 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo $isEdit ? 'Edit Booking' : 'New Booking'; ?> | Avianna's Admin</title>
-
+    <title><?php echo $id > 0 ? "Edit Booking" : "New Booking"; ?> | Avianna's Admin</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-
     <style>
-        :root {
-            --primary-green: #1e4d40;
-            --accent-teal: #2c7a7b;
-            --sidebar-width: 260px;
-            --bg-light: #f4f7f6;
-        }
-        body { font-family: 'Inter', sans-serif; background-color: var(--bg-light); margin: 0; }
-
-        #scrollUp, .scroll-to-top, .back-to-top, [id*="scroll"], .tp-top-arrow, button[title*="top"], .scrollup {
-            display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important;
-        }
-
-        .sidebar {
-            height: 100vh; background: linear-gradient(180deg, var(--primary-green) 0%, #0a1a16 100%);
-            color: white; position: fixed; width: var(--sidebar-width); padding: 25px 20px;
-            box-shadow: 4px 0 10px rgba(0,0,0,0.1); z-index: 1000;
-        }
-        .sidebar h4 { font-weight: 700; text-align: center; margin-bottom: 30px; }
-        .nav-link {
-            color: rgba(255,255,255,0.7); margin-bottom: 8px; padding: 12px 15px;
-            border-radius: 8px; font-weight: 500; transition: all 0.3s ease; text-decoration: none; display: block;
-        }
-        .nav-link:hover { color: white; background: rgba(255,255,255,0.1); transform: translateX(5px); }
-        .nav-link.active { color: white; background: var(--accent-teal); box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
-
-        .main-content { margin-left: var(--sidebar-width); padding: 40px; min-height: 100vh; }
-
-        .header-title {
-            color: var(--primary-green); border-left: 6px solid var(--accent-teal);
-            padding-left: 20px; font-weight: 700; margin-bottom: 30px;
-        }
-
-        .form-card { background: white; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); padding: 35px; max-width: 720px; }
-        .form-label { font-weight: 600; color: var(--primary-green); }
-        .btn-save { background-color: var(--primary-green); color: white; border-radius: 8px; padding: 10px 24px; font-weight: 600; border: none; }
-        .btn-save:hover { background-color: var(--accent-teal); color: white; }
-        .btn-cancel { border-radius: 8px; padding: 10px 24px; font-weight: 600; }
-
-        @media (max-width: 992px) {
-            .sidebar { width: 80px; padding: 20px 10px; }
-            .sidebar h4, .nav-link span { display: none; }
-            .main-content { margin-left: 80px; }
-        }
+        :root { --primary-green: #1e4d40; --accent-teal: #2c7a7b; --bg-light: #f4f7f6; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg-light); padding: 40px 0; }
+        .form-card { background: white; border-radius: 16px; padding: 35px; box-shadow: 0 10px 30px rgba(0,0,0,0.06); max-width: 650px; margin: auto; }
+        .btn-custom { background-color: var(--primary-green); color: white; border-radius: 8px; font-weight: 600; }
+        .btn-custom:hover { background-color: var(--accent-teal); color: white; }
     </style>
 </head>
 <body>
-
-<div class="sidebar">
-    <h4>Avianna's Admin</h4>
-    <hr style="border-color: rgba(255,255,255,0.1);">
-    <nav class="nav flex-column">
-        <a class="nav-link active" href="admin.php"><span>Pending Bookings</span></a>
-        <a class="nav-link" href="approve.php"><span>Approved History</span></a>
-        <a class="nav-link" href="admin_cancelled.php"><span>Cancellation History</span></a>
-        <a class="nav-link" href="admin_announcements.php"><span>Announcements</span></a>
-        <a class="nav-link" href="admin_analytics.php"><span>Analytics</span></a>
-        <hr style="border-color: rgba(255,255,255,0.1); margin: 20px 0;">
-        <a class="nav-link text-info" href="../reception/index.php"><span>🛎 Front Desk</span></a>
-        <a class="nav-link text-warning" href="../index.php" target="_blank"><span>← View Website</span></a>
-        <a class="nav-link text-danger" href="logout.php"><span>Logout</span></a>
-    </nav>
-</div>
-
-<div class="main-content">
-    <h2 class="header-title"><?php echo $isEdit ? 'Edit Booking' : 'New Booking'; ?></h2>
-
-    <?php if (!empty($errors)): ?>
-        <div class="alert alert-danger">
-            <ul class="mb-0">
-                <?php foreach ($errors as $e): ?>
-                    <li><?php echo htmlspecialchars($e); ?></li>
-                <?php endforeach; ?>
-            </ul>
-        </div>
-    <?php endif; ?>
-
+<div class="container">
     <div class="form-card">
+        <h3 class="fw-bold text-dark mb-4"><?php echo $id > 0 ? "Edit Reservation" : "Create New Reservation"; ?></h3>
+        
+        <?php if (!empty($error_msg)): ?>
+            <div class="alert alert-danger mb-4"><?php echo htmlspecialchars($error_msg); ?></div>
+        <?php endif; ?>
+
         <form method="POST">
             <div class="row g-3">
                 <div class="col-md-6">
-                    <label class="form-label">Guest Name</label>
-                    <input type="text" name="name" class="form-control" value="<?php echo htmlspecialchars($booking['name']); ?>" required>
+                    <label class="form-label fw-semibold">Guest Name *</label>
+                    <input type="text" name="name" class="form-control" value="<?php echo htmlspecialchars($booking['name'] ?? ''); ?>" required>
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">Email</label>
-                    <input type="email" name="email" class="form-control" value="<?php echo htmlspecialchars($booking['email']); ?>" required>
+                    <label class="form-label fw-semibold">Email Address *</label>
+                    <input type="email" name="email" class="form-control" value="<?php echo htmlspecialchars($booking['email'] ?? ''); ?>" required>
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">Contact Number</label>
-                    <input type="text" name="contact" class="form-control" value="<?php echo htmlspecialchars($booking['contact'] ?? ''); ?>" placeholder="+63 9XX XXX XXXX" required>
+                    <label class="form-label fw-semibold">Contact Number</label>
+                    <input type="text" name="contact" class="form-control" value="<?php echo htmlspecialchars($booking['contact'] ?? ''); ?>">
                 </div>
-                <div class="col-12">
-                    <label class="form-label">Address</label>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Address</label>
                     <input type="text" name="address" class="form-control" value="<?php echo htmlspecialchars($booking['address'] ?? ''); ?>">
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">Room Type</label>
-                    <input type="text" name="room_type" class="form-control" value="<?php echo htmlspecialchars($booking['room_type']); ?>" required>
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">Cottage Type</label>
-                    <select name="cottage_type" class="form-select">
-                        <?php foreach (['None', 'Cottage 6', 'Cottage 400', 'Cottage 600'] as $opt): ?>
-                            <option value="<?php echo $opt; ?>" <?php echo ($booking['cottage_type'] ?? 'None') === $opt ? 'selected' : ''; ?>><?php echo $opt; ?></option>
+                    <label class="form-label fw-semibold">Room Type *</label>
+                    <select name="room_type" class="form-select" required>
+                        <?php foreach (array_keys($room_prices) as $type): ?>
+                            <option value="<?php echo $type; ?>" <?php echo (isset($booking['room_type']) && $booking['room_type'] === $type) ? 'selected' : ''; ?>>
+                                <?php echo $type; ?>
+                            </option>
                         <?php endforeach; ?>
                     </select>
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">Number of Guests (Pax)</label>
-                    <select name="pax" class="form-select">
-                        <?php foreach (['1-6', '7-15', '16-30', '31-50', '50+'] as $opt): ?>
-                            <option value="<?php echo $opt; ?>" <?php echo ($booking['pax'] ?? '1-6') === $opt ? 'selected' : ''; ?>><?php echo $opt; ?> pax</option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">Payment Method</label>
+                    <label class="form-label fw-semibold">Payment Method</label>
                     <select name="payment_method" class="form-select">
-                        <?php foreach (['Cash', 'GCash'] as $opt): ?>
-                            <option value="<?php echo $opt; ?>" <?php echo ($booking['payment_method'] ?? '') === $opt ? 'selected' : ''; ?>><?php echo $opt; ?></option>
-                        <?php endforeach; ?>
+                        <option value="Cash" <?php echo (isset($booking['payment_method']) && $booking['payment_method'] === 'Cash') ? 'selected' : ''; ?>>Cash</option>
+                        <option value="GCash" <?php echo (isset($booking['payment_method']) && $booking['payment_method'] === 'GCash') ? 'selected' : ''; ?>>GCash</option>
+                        <option value="Credit Card" <?php echo (isset($booking['payment_method']) && $booking['payment_method'] === 'Credit Card') ? 'selected' : ''; ?>>Credit Card</option>
                     </select>
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">Check-in Date</label>
-                    <input type="date" name="checkin_date" class="form-control" value="<?php echo htmlspecialchars($booking['checkin_date']); ?>" required>
+                    <label class="form-label fw-semibold">Check-in Date *</label>
+                    <input type="date" name="checkin_date" class="form-control" value="<?php echo htmlspecialchars($booking['checkin_date'] ?? ''); ?>" required>
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">Check-out Date</label>
-                    <input type="date" name="checkout_date" class="form-control" value="<?php echo htmlspecialchars($booking['checkout_date']); ?>" required>
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">Total Price (₱)</label>
-                    <input type="number" step="0.01" min="0" name="total_price" class="form-control" value="<?php echo htmlspecialchars($booking['total_price']); ?>">
+                    <label class="form-label fw-semibold">Check-out Date *</label>
+                    <input type="date" name="checkout_date" class="form-control" value="<?php echo htmlspecialchars($booking['checkout_date'] ?? ''); ?>" required>
                 </div>
             </div>
-
-            <div class="mt-4 d-flex gap-2">
-                <button type="submit" class="btn btn-save"><?php echo $isEdit ? 'Save Changes' : 'Create Booking'; ?></button>
-                <a href="admin.php" class="btn btn-outline-secondary btn-cancel">Cancel</a>
+            
+            <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
+                <a href="admin.php" class="btn btn-outline-secondary">Cancel</a>
+                <button type="submit" class="btn btn-custom px-4 py-2">Save Booking</button>
             </div>
         </form>
     </div>
 </div>
-
 </body>
 </html>
