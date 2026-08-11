@@ -243,7 +243,9 @@ $result = $conn->query($sql);
                             <?php elseif ($row['status'] === 'Checked Out'): ?>
                                 <span class="status-checkedout">✅ Checked Out</span>
                             <?php else: ?>
-                                <span class="status-approved">✔ Approved</span>
+                                <a href="../admin/reception/approve.php?id=<?php echo $row['id']; ?>" class="btn btn-sm btn-outline-success px-3">
+                                    <i class="bi bi-check-circle"></i> Approve
+                                </a>
                             <?php endif; ?>
                         </td>
                         <td>
@@ -252,7 +254,7 @@ $result = $conn->query($sql);
                                 View
                             </button>
                             <?php if ($row['status'] === 'Checked In' || $row['status'] === 'Checked Out'): ?>
-                                <a href="../reception/print_receipt.php?id=<?php echo $row['id']; ?>" class="btn btn-outline-secondary btn-sm px-3" target="_blank">
+                                <a href="../admin/reception/print_receipt.php?id=<?php echo $row['id']; ?>" class="btn btn-outline-secondary btn-sm px-3" target="_blank">
                                     <i class="bi bi-receipt"></i> Receipt
                                 </a>
                             <?php endif; ?>

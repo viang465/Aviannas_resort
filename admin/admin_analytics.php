@@ -228,7 +228,7 @@ if ($res = $conn->query("SELECT id, name, room_type, status, checkin_date FROM b
         <a class="nav-link" href="admin_announcements.php"><span>Announcements</span></a>
         <a class="nav-link active" href="admin_analytics.php"><span>Dashboard</span></a>
         <hr style="border-color: rgba(255,255,255,0.1); margin: 20px 0;">
-        <a class="nav-link text-info" href="../reception/index.php"><span>🛎 Front Desk</span></a>
+        <a class="nav-link text-info" href="../admin/reception/index.php"><span>🛎 Front Desk</span></a>
         <a class="nav-link text-warning" href="../index.php" target="_blank"><span>← View Website</span></a>
         <a class="nav-link text-danger" href="logout.php"><span>Logout</span></a>
     </nav>

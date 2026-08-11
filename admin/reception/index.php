@@ -80,6 +80,11 @@ $result = $stmt->get_result();
         </a>
         <div class="d-flex align-items-center">
             <span class="text-light me-3 small"><i class="bi bi-calendar3 me-1"></i> Today: <?php echo date('M d, Y'); ?></span>
+            <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
+                <a href="../admin/admin.php" class="btn btn-sm btn-outline-warning rounded-pill me-2">
+                    <i class="bi bi-speedometer2 me-1"></i> Admin Panel
+                </a>
+            <?php endif; ?>
             <a href="../index.php" class="btn btn-sm btn-outline-light rounded-pill"><i class="bi bi-box-arrow-right me-1"></i> Exit</a>
         </div>
     </div>
