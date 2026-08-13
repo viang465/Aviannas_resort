@@ -7,6 +7,39 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
     exit();
 }
 
+// ---- CSV Export ----
+if (isset($_GET['export']) && $_GET['export'] === 'csv') {
+    $exportSql = "SELECT id, name, email, contact, address, room_type, checkin_date, checkout_date, payment_method, total_price, status FROM bookings ORDER BY checkin_date DESC";
+    $exportRes = $conn->query($exportSql);
+
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename=bookings_export_' . date('Y-m-d') . '.csv');
+
+    $out = fopen('php://output', 'w');
+    fputcsv($out, ['ID', 'Name', 'Email', 'Contact', 'Address', 'Room Type', 'Check-in', 'Check-out', 'Payment Method', 'Total Price', 'Status']);
+
+    if ($exportRes) {
+        while ($row = $exportRes->fetch_assoc()) {
+            fputcsv($out, [
+                $row['id'],
+                $row['name'],
+                $row['email'],
+                $row['contact'],
+                $row['address'],
+                $row['room_type'],
+                $row['checkin_date'],
+                $row['checkout_date'],
+                $row['payment_method'],
+                $row['total_price'],
+                $row['status'] ?: 'Pending'
+            ]);
+        }
+    }
+
+    fclose($out);
+    exit();
+}
+
 // ---- Core stat counts (from bookings table) ----
 $counts = [
     'pending'     => 0,
@@ -76,6 +109,85 @@ if ($res = $conn->query($trendSql)) {
     }
 }
 $trendCounts = array_values($monthBuckets);
+
+// ---- This month's revenue (confirmed pipeline, by check-in month) ----
+$thisMonthRevenue = 0;
+$thisMonthLabel = date('F Y');
+$monthRevSql = "SELECT COALESCE(SUM(total_price),0) AS rev
+                FROM bookings
+                WHERE status IN ('Approved','Checked In','Checked Out')
+                  AND MONTH(checkin_date) = MONTH(CURDATE())
+                  AND YEAR(checkin_date) = YEAR(CURDATE())";
+if ($res = $conn->query($monthRevSql)) {
+    if ($row = $res->fetch_assoc()) $thisMonthRevenue = (float) $row['rev'];
+}
+
+// ---- Weekly breakdown: browsable by month + year (confirmed pipeline) ----
+$monthNames = [
+    1 => 'January', 2 => 'February', 3 => 'March', 4 => 'April',
+    5 => 'May', 6 => 'June', 7 => 'July', 8 => 'August',
+    9 => 'September', 10 => 'October', 11 => 'November', 12 => 'December'
+];
+
+$selectedMonth = isset($_GET['wb_month']) ? max(1, min(12, (int) $_GET['wb_month'])) : (int) date('n');
+$selectedYear  = isset($_GET['wb_year'])  ? (int) $_GET['wb_year']  : (int) date('Y');
+
+// Years available in the data, so the dropdown always covers real bookings (plus the current year)
+$availableYears = [(int) date('Y')];
+if ($res = $conn->query("SELECT DISTINCT YEAR(checkin_date) AS y FROM bookings WHERE checkin_date IS NOT NULL ORDER BY y DESC")) {
+    while ($row = $res->fetch_assoc()) {
+        $y = (int) $row['y'];
+        if ($y && !in_array($y, $availableYears, true)) $availableYears[] = $y;
+    }
+}
+rsort($availableYears);
+
+$weeklyBreakdown = []; // week number => ['count' => n, 'revenue' => n, 'start' => DateTime, 'end' => DateTime]
+$daysInSelectedMonth = (int) date('t', mktime(0, 0, 0, $selectedMonth, 1, $selectedYear));
+
+$weekSql = "SELECT checkin_date, total_price
+            FROM bookings
+            WHERE status IN ('Approved','Checked In','Checked Out')
+              AND MONTH(checkin_date) = ?
+              AND YEAR(checkin_date) = ?";
+$weekStmt = $conn->prepare($weekSql);
+$weekStmt->bind_param("ii", $selectedMonth, $selectedYear);
+$weekStmt->execute();
+$weekRes = $weekStmt->get_result();
+while ($row = $weekRes->fetch_assoc()) {
+    $day = (int) date('j', strtotime($row['checkin_date']));
+    $week = (int) ceil($day / 7);
+    if (!isset($weeklyBreakdown[$week])) {
+        $startDay = ($week - 1) * 7 + 1;
+        $endDay   = min($week * 7, $daysInSelectedMonth);
+        $weeklyBreakdown[$week] = [
+            'count'   => 0,
+            'revenue' => 0,
+            'start'   => mktime(0, 0, 0, $selectedMonth, $startDay, $selectedYear),
+            'end'     => mktime(0, 0, 0, $selectedMonth, $endDay, $selectedYear),
+        ];
+    }
+    $weeklyBreakdown[$week]['count']++;
+    $weeklyBreakdown[$week]['revenue'] += (float) $row['total_price'];
+}
+$weekStmt->close();
+ksort($weeklyBreakdown);
+
+$selectedMonthLabel = $monthNames[$selectedMonth] . ' ' . $selectedYear;
+
+// ---- Top guest locations (from address field) ----
+$topLocations = [];
+$locSql = "SELECT address, COUNT(*) AS c
+           FROM bookings
+           WHERE address IS NOT NULL AND address != ''
+           GROUP BY address
+           ORDER BY c DESC
+           LIMIT 5";
+if ($res = $conn->query($locSql)) {
+    while ($row = $res->fetch_assoc()) {
+        $topLocations[] = $row;
+    }
+}
 
 // ---- Recent activity (latest 6 bookings) ----
 $recent = [];
@@ -235,9 +347,28 @@ if ($res = $conn->query("SELECT id, name, room_type, status, checkin_date FROM b
 </div>
 
 <div class="main-content">
-    <h2 class="header-title">Dashboard Overview</h2>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="header-title mb-0">Dashboard Overview</h2>
+        <a href="admin_analytics.php?export=csv" class="btn btn-custom" style="background-color: var(--primary-green); color: white; border-radius: 8px; padding: 10px 20px; font-weight: 600; text-decoration: none;">
+            <i class="bi bi-file-earmark-spreadsheet"></i> Export CSV
+        </a>
+    </div>
 
     <div class="row g-4 mb-4">
+        <div class="col-6 col-lg-2">
+            <div class="stat-card">
+                <div class="stat-icon bg-revenue"><i class="bi bi-cash-stack"></i></div>
+                <p class="stat-value">₱<?php echo number_format($totalRevenue, 0); ?></p>
+                <span class="stat-label">Total Revenue</span>
+            </div>
+        </div>
+        <div class="col-6 col-lg-2">
+            <div class="stat-card">
+                <div class="stat-icon bg-revenue"><i class="bi bi-calendar2-week"></i></div>
+                <p class="stat-value">₱<?php echo number_format($thisMonthRevenue, 0); ?></p>
+                <span class="stat-label"><?php echo htmlspecialchars($thisMonthLabel); ?></span>
+            </div>
+        </div>
         <div class="col-6 col-lg-2">
             <div class="stat-card">
                 <div class="stat-icon bg-pending"><i class="bi bi-hourglass-split"></i></div>
@@ -273,11 +404,89 @@ if ($res = $conn->query("SELECT id, name, room_type, status, checkin_date FROM b
                 <span class="stat-label">Cancelled</span>
             </div>
         </div>
-        <div class="col-6 col-lg-2">
-            <div class="stat-card">
-                <div class="stat-icon bg-revenue"><i class="bi bi-cash-stack"></i></div>
-                <p class="stat-value">₱<?php echo number_format($totalRevenue, 0); ?></p>
-                <span class="stat-label">Revenue</span>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-12">
+            <div class="chart-card">
+                <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+                    <h6 class="fw-bold text-dark mb-0">📅 Weekly Breakdown — <?php echo htmlspecialchars($selectedMonthLabel); ?></h6>
+                    <form method="GET" class="d-flex gap-2">
+                        <select name="wb_month" class="form-select form-select-sm" onchange="this.form.submit()" style="width: auto;">
+                            <?php foreach ($monthNames as $num => $label): ?>
+                                <option value="<?php echo $num; ?>" <?php echo $num === $selectedMonth ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars($label); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <select name="wb_year" class="form-select form-select-sm" onchange="this.form.submit()" style="width: auto;">
+                            <?php foreach ($availableYears as $y): ?>
+                                <option value="<?php echo $y; ?>" <?php echo $y === $selectedYear ? 'selected' : ''; ?>>
+                                    <?php echo $y; ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <noscript><button type="submit" class="btn btn-sm btn-outline-secondary">Go</button></noscript>
+                    </form>
+                </div>
+                <?php if (!empty($weeklyBreakdown)): ?>
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0">
+                            <thead>
+                                <tr>
+                                    <th class="text-muted small text-uppercase">Week</th>
+                                    <th class="text-muted small text-uppercase">Date Range</th>
+                                    <th class="text-muted small text-uppercase">Bookings</th>
+                                    <th class="text-muted small text-uppercase">Total Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($weeklyBreakdown as $weekNum => $data): ?>
+                                    <tr>
+                                        <td class="fw-medium">Week <?php echo $weekNum; ?></td>
+                                        <td class="text-muted">
+                                            <?php echo date('M j, Y', $data['start']); ?> – <?php echo date('M j, Y', $data['end']); ?>
+                                        </td>
+                                        <td><?php echo $data['count']; ?></td>
+                                        <td>₱<?php echo number_format($data['revenue'], 2); ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php else: ?>
+                    <p class="text-muted mb-0">No approved bookings found for <?php echo htmlspecialchars($selectedMonthLabel); ?>.</p>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-12">
+            <div class="chart-card">
+                <h6 class="fw-bold text-dark mb-3">📍 Top Guest Locations</h6>
+                <?php if (!empty($topLocations)): ?>
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0">
+                            <thead>
+                                <tr>
+                                    <th class="text-muted small text-uppercase">Address</th>
+                                    <th class="text-muted small text-uppercase">Bookings</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($topLocations as $loc): ?>
+                                    <tr>
+                                        <td class="fw-medium"><?php echo htmlspecialchars($loc['address']); ?></td>
+                                        <td><span class="badge bg-secondary"><?php echo (int) $loc['c']; ?></span></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php else: ?>
+                    <p class="text-muted mb-0">No guest address data available yet.</p>
+                <?php endif; ?>
             </div>
         </div>
     </div>
