@@ -133,7 +133,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <select name="payment_method" class="form-select">
                         <option value="Cash" <?php echo (isset($booking['payment_method']) && $booking['payment_method'] === 'Cash') ? 'selected' : ''; ?>>Cash</option>
                         <option value="GCash" <?php echo (isset($booking['payment_method']) && $booking['payment_method'] === 'GCash') ? 'selected' : ''; ?>>GCash</option>
-                        <option value="Credit Card" <?php echo (isset($booking['payment_method']) && $booking['payment_method'] === 'Credit Card') ? 'selected' : ''; ?>>Credit Card</option>
                     </select>
                 </div>
                 <div class="col-md-6">
