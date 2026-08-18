@@ -27,7 +27,7 @@ if (!empty($search)) {
     $stmt = $conn->prepare("SELECT * FROM bookings WHERE name LIKE ? OR email LIKE ? OR id = ? ORDER BY checkin_date ASC");
     $stmt->bind_param("ssi", $search_param, $search_param, $search_id);
 } else {
-    $stmt = $conn->prepare("SELECT * FROM bookings WHERE checkin_date = ? OR status = 'Checked In' ORDER BY checkin_date ASC");
+    $stmt = $conn->prepare("SELECT * FROM bookings WHERE checkin_date = ? OR status IN ('Approved', 'Checked In') ORDER BY checkin_date ASC");
     $stmt->bind_param("s", $today);
 }
 
@@ -81,11 +81,11 @@ $result = $stmt->get_result();
         <div class="d-flex align-items-center">
             <span class="text-light me-3 small"><i class="bi bi-calendar3 me-1"></i> Today: <?php echo date('M d, Y'); ?></span>
             <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
-                <a href="../admin/admin.php" class="btn btn-sm btn-outline-warning rounded-pill me-2">
+                <a href="../admin.php" class="btn btn-sm btn-outline-warning rounded-pill me-2">
                     <i class="bi bi-speedometer2 me-1"></i> Admin Panel
                 </a>
             <?php endif; ?>
-            <a href="../admin/logout.php" class="btn btn-sm btn-outline-light rounded-pill"><i class="bi bi-box-arrow-right me-1"></i> Exit</a>
+            <a href="../index.php" class="btn btn-sm btn-outline-light rounded-pill"><i class="bi bi-box-arrow-right me-1"></i> Exit</a>
         </div>
     </div>
 </nav>
@@ -116,8 +116,8 @@ $result = $stmt->get_result();
             <a href="checkin.php" class="btn btn-outline-success fw-semibold rounded-3 me-2">
                 <i class="bi bi-person-plus-fill me-1"></i> Walk-In Registration
             </a>
-            <a href="../book.php" target="_blank" class="btn btn-success fw-semibold rounded-3">
-                <i class="bi bi-plus-lg me-1"></i> New Walk-In Booking
+            <a href="../admin/manage_booking.php" class="btn btn-outline-primary fw-semibold rounded-3">
+                <i class="bi bi-pencil-square me-1"></i> Create / Edit Booking
             </a>
         </div>
     </div>
@@ -145,7 +145,7 @@ $result = $stmt->get_result();
     <div class="card card-stat">
         <div class="card-header bg-white py-3 border-0">
             <h5 class="fw-bold mb-0 text-dark">
-                <?php echo !empty($search) ? 'Search Results' : "Today's Guests & Active Stays"; ?>
+                <?php echo !empty($search) ? 'Search Results' : "Today's Arrivals, Approved Bookings & Active Stays"; ?>
             </h5>
         </div>
         <div class="table-responsive">
@@ -206,6 +206,11 @@ $result = $stmt->get_result();
                                     <?php else: ?>
                                         <a href="print_receipt.php?id=<?php echo $row['id']; ?>" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
                                             <i class="bi bi-receipt me-1"></i> View Receipt
+                                        </a>
+                                    <?php endif; ?>
+                                    <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
+                                        <a href="../admin/manage_booking.php?id=<?php echo $row['id']; ?>" class="btn btn-sm btn-outline-primary rounded-pill px-3 ms-1">
+                                            <i class="bi bi-pencil-square me-1"></i> Edit
                                         </a>
                                     <?php endif; ?>
                                 </td>

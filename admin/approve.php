@@ -243,9 +243,7 @@ $result = $conn->query($sql);
                             <?php elseif ($row['status'] === 'Checked Out'): ?>
                                 <span class="status-checkedout">✅ Checked Out</span>
                             <?php else: ?>
-                                <a href="../admin/reception/approve.php?id=<?php echo $row['id']; ?>" class="btn btn-sm btn-outline-success px-3">
-                                    <i class="bi bi-check-circle"></i> Approve
-                                </a>
+                                <span class="status-approved">✔ Approved</span>
                             <?php endif; ?>
                         </td>
                         <td>
@@ -253,6 +251,15 @@ $result = $conn->query($sql);
                                     data-booking='<?php echo htmlspecialchars(json_encode($row), ENT_QUOTES, "UTF-8"); ?>'>
                                 View
                             </button>
+                            <?php if ($row['status'] === 'Approved'): ?>
+                                <a href="../admin/reception/checkin.php?id=<?php echo $row['id']; ?>" class="btn btn-outline-success btn-sm px-3 me-2">
+                                    <i class="bi bi-box-arrow-in-right"></i> Check In
+                                </a>
+                            <?php elseif ($row['status'] === 'Checked In'): ?>
+                                <a href="../admin/reception/checkout.php?id=<?php echo $row['id']; ?>" class="btn btn-outline-warning btn-sm px-3 me-2">
+                                    <i class="bi bi-box-arrow-right"></i> Check Out
+                                </a>
+                            <?php endif; ?>
                             <?php if ($row['status'] === 'Checked In' || $row['status'] === 'Checked Out'): ?>
                                 <a href="../admin/reception/print_receipt.php?id=<?php echo $row['id']; ?>" class="btn btn-outline-secondary btn-sm px-3" target="_blank">
                                     <i class="bi bi-receipt"></i> Receipt
