@@ -116,9 +116,6 @@ $result = $stmt->get_result();
             <a href="checkin.php" class="btn btn-outline-success fw-semibold rounded-3 me-2">
                 <i class="bi bi-person-plus-fill me-1"></i> Walk-In Registration
             </a>
-            <a href="../admin/manage_booking.php" class="btn btn-outline-primary fw-semibold rounded-3">
-                <i class="bi bi-pencil-square me-1"></i> Create / Edit Booking
-            </a>
         </div>
     </div>
 

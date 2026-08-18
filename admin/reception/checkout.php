@@ -78,12 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $guest && $guest['status'] === 'Che
             </div>
 
             <form method="POST">
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Additional Charges / Incidentals (₱)</label>
-                    <input type="number" step="0.01" name="incidentals" class="form-control" value="0.00" placeholder="0.00">
-                    <small class="text-muted">Food, drinks, or damaged item fees</small>
-                </div>
-
+    
                 <button type="submit" class="btn btn-warning w-100 py-2 fw-bold text-dark">Complete Check-Out & Generate Invoice</button>
             </form>
         </div>
