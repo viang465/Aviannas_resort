@@ -85,7 +85,7 @@ $result = $stmt->get_result();
                     <i class="bi bi-speedometer2 me-1"></i> Admin Panel
                 </a>
             <?php endif; ?>
-            <a href="../index.php" class="btn btn-sm btn-outline-light rounded-pill"><i class="bi bi-box-arrow-right me-1"></i> Exit</a>
+            <a href="../admin/logout.php" class="btn btn-sm btn-outline-light rounded-pill"><i class="bi bi-box-arrow-right me-1"></i> Exit</a>
         </div>
     </div>
 </nav>
