@@ -20,11 +20,15 @@ if ($id > 0) {
 }
 
 // Room pricing array for automated total calculation
+// Must match the accommodation options offered on the public book.php form
 $room_prices = [
-    'Standard Room' => 1500.00,
-    'Deluxe Room'   => 2500.00,
-    'Family Suite'  => 4000.00,
-    'Vip Villa'     => 6000.00
+    'None'                  => 0.00,
+    'Overnight Room'        => 2500.00,
+    'Poolside Pavilion'     => 2200.00,
+    'Pavilion 1'            => 2000.00,
+    'Pavilion Overlooking'  => 2500.00,
+    'Old Pavilion'          => 2000.00,
+    'New Pavilion'          => 3500.00,
 ];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {

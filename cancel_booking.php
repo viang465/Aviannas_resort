@@ -38,7 +38,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 SELECT
                     name, email, contact, address, room_type, cottage_type, pax,
                     payment_method, total_price,
-                    checkin, checkout, NOW(), NOW()
+                    checkin_date, checkout_date, NOW(), NOW()
                 FROM bookings
                 WHERE email = ?
             ";

@@ -357,10 +357,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 <div class="col-12"><hr class="section-divider"><p class="section-label">🏨 Stay Details / Accommodation</p></div>
 
                 <div class="col-md-6">
-                    <label class="form-label">Overnight Room</label>
+                    <label class="form-label">Room / Accommodation Type</label>
                     <select name="room_type" class="form-select" id="roomType">
                         <option value="None" data-price="0">No Accommodation</option>
                         <option value="Overnight Room" data-price="2500">Overnight Room (max 6 pax, AC + Fan, Mini Kitchen) — ₱2,500</option>
+                        <option value="Poolside Pavilion" data-price="2200">Poolside Pavilion (max 40 pax) — ₱2,200</option>
+                        <option value="Pavilion 1" data-price="2000">Pavilion 1 — Semi Open (Chairs & Fan) — ₱2,000</option>
+                        <option value="Pavilion Overlooking" data-price="2500">Pavilion Overlooking Pool (Chairs & Fan) — ₱2,500</option>
+                        <option value="Old Pavilion" data-price="2000">Old Pavilion (Chairs & Fan) — ₱2,000</option>
+                        <option value="New Pavilion" data-price="3500">New Pavilion (Chairs & Fan) — ₱3,500</option>
                     </select>
                 </div>
                 <div class="col-md-6">
@@ -370,17 +375,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         <option value="Cottage 6" data-price="400" data-elec="100">Cottage 6 (8–12 pax, Day Stay Only) — ₱400 + ₱100 electricity</option>
                         <option value="Cottage 400" data-price="400" data-elec="0">Cottage 400 (Good for 10) — ₱400</option>
                         <option value="Cottage 600" data-price="600" data-elec="0">Cottage 600 (Good for 15) — ₱600</option>
-                    </select>
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">Pavillion Type</label>
-                    <select name="room_type" class="form-select" id="pavilionType">
-                        <option value="None" data-price="0">No Accommodation</option>
-                        <option value="Poolside Pavilion" data-price="2200">Poolside Pavilion (max 40 pax) — ₱2,200</option>
-                        <option value="Pavilion 1" data-price="2000">Pavilion 1 — Semi Open (Chairs & Fan) — ₱2,000</option>
-                        <option value="Pavilion Overlooking" data-price="2500">Pavilion Overlooking Pool (Chairs & Fan) — ₱2,500</option>
-                        <option value="Old Pavilion" data-price="2000">Old Pavilion (Chairs & Fan) — ₱2,000</option>
-                        <option value="New Pavilion" data-price="3500">New Pavilion (Chairs & Fan) — ₱3,500</option>
                     </select>
                 </div>
                 <div class="col-md-6">
@@ -448,10 +442,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 function calculateTotal() {
     const roomSel    = document.getElementById('roomType');
     const cottageSel = document.getElementById('cottageType');
-    const pavilionSel= document.getElementById('pavilionType');
-    
+
     const roomPrice     = roomSel ? (parseInt(roomSel.selectedOptions[0].dataset.price) || 0) : 0;
-    const pavilionPrice = pavilionSel ? (parseInt(pavilionSel.selectedOptions[0].dataset.price) || 0) : 0;
     const cottagePrice  = cottageSel ? (parseInt(cottageSel.selectedOptions[0].dataset.price) || 0) : 0;
     const elecSurcharge = cottageSel ? (parseInt(cottageSel.selectedOptions[0].dataset.elec)  || 0) : 0;
     
@@ -464,7 +456,7 @@ function calculateTotal() {
         if (diff > 0) nights = diff;
     }
 
-    const total = ((roomPrice + pavilionPrice) * nights) + cottagePrice + elecSurcharge;
+    const total = (roomPrice * nights) + cottagePrice + elecSurcharge;
     document.getElementById('totalAmount').textContent = total.toFixed(2);
     document.getElementById('totalPriceInput').value   = total.toFixed(2);
 }
@@ -482,7 +474,7 @@ function handleCheckinChange() {
     calculateTotal();
 }
 
-['roomType','cottageType','pavilionType','paxType'].forEach(id => {
+['roomType','cottageType','paxType'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('change', calculateTotal);
 });
