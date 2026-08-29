@@ -24,8 +24,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $guest && $guest['status'] === 'Che
     $incidentals = floatval($_POST['incidentals'] ?? 0);
     $final_total = floatval($guest['total_price']) + $incidentals;
 
-    $stmt = $conn->prepare("UPDATE bookings SET status = 'Checked Out', total_price = ? WHERE id = ?");
-    $stmt->bind_param("di", $final_total, $booking_id);
+    $payment_status = $_POST['payment_status'] ?? ($guest['payment_status'] ?? 'Pending');
+    if (!in_array($payment_status, ['Paid', 'Pending'], true)) {
+        $payment_status = 'Pending';
+    }
+
+    $stmt = $conn->prepare("UPDATE bookings SET status = 'Checked Out', total_price = ?, payment_status = ? WHERE id = ?");
+    $stmt->bind_param("dsi", $final_total, $payment_status, $booking_id);
     
     if ($stmt->execute()) {
         header("Location: print_receipt.php?id=" . $booking_id);
@@ -78,7 +83,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $guest && $guest['status'] === 'Che
             </div>
 
             <form method="POST">
-    
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Payment Status</label>
+                    <?php $curPayStatus = $guest['payment_status'] ?? 'Pending'; ?>
+                    <select name="payment_status" class="form-select">
+                        <option value="Pending" <?php echo $curPayStatus === 'Pending' ? 'selected' : ''; ?>>Pending</option>
+                        <option value="Paid" <?php echo $curPayStatus === 'Paid' ? 'selected' : ''; ?>>Paid</option>
+                    </select>
+                </div>
                 <button type="submit" class="btn btn-warning w-100 py-2 fw-bold text-dark">Complete Check-Out & Generate Invoice</button>
             </form>
         </div>

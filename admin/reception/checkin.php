@@ -32,8 +32,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($booking_id > 0) {
         // Checking in an existing reservation
-        $stmt = $conn->prepare("UPDATE bookings SET status = 'Checked In' WHERE id = ?");
-        $stmt->bind_param("i", $booking_id);
+        $payment_status = $_POST['payment_status'] ?? 'Pending';
+        if (!in_array($payment_status, ['Paid', 'Pending'], true)) {
+            $payment_status = 'Pending';
+        }
+
+        $stmt = $conn->prepare("UPDATE bookings SET status = 'Checked In', payment_status = ? WHERE id = ?");
+        $stmt->bind_param("si", $payment_status, $booking_id);
         if ($stmt->execute()) {
             header("Location: index.php?msg=checked_in");
             exit;
@@ -55,12 +60,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $payment     = $_POST['payment_method'] ?? 'Cash';
         $total_price = floatval($_POST['total_price'] ?? 0);
         $status      = 'Checked In';
+        $payment_status = $_POST['payment_status'] ?? 'Pending';
+        if (!in_array($payment_status, ['Paid', 'Pending'], true)) {
+            $payment_status = 'Pending';
+        }
 
         if (empty($name) || empty($contact)) {
             $error = "Guest Name and Contact Number are required.";
         } else {
-            $stmt = $conn->prepare("INSERT INTO bookings (name, email, contact, address, room_type, cottage_type, pax, checkin_date, checkout_date, payment_method, total_price, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-            $stmt->bind_param("ssssssssssds", $name, $email, $contact, $address, $room, $cottage, $pax, $checkin, $checkout, $payment, $total_price, $status);
+            $stmt = $conn->prepare("INSERT INTO bookings (name, email, contact, address, room_type, cottage_type, pax, checkin_date, checkout_date, payment_method, total_price, status, payment_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmt->bind_param("ssssssssssdss", $name, $email, $contact, $address, $room, $cottage, $pax, $checkin, $checkout, $payment, $total_price, $status, $payment_status);
             
             if ($stmt->execute()) {
                 $new_id = $stmt->insert_id;
@@ -110,10 +119,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <tr><th>Contact</th><td><?php echo htmlspecialchars($guest['contact']); ?></td></tr>
                 <tr><th>Accommodation</th><td><?php echo htmlspecialchars($guest['room_type']); ?> / <?php echo htmlspecialchars($guest['cottage_type']); ?></td></tr>
                 <tr><th>Total Due</th><td class="fw-bold text-success">₱<?php echo number_format($guest['total_price'], 2); ?></td></tr>
+                <tr>
+                    <th>Payment Status</th>
+                    <td>
+                        <?php $curPayStatus = $guest['payment_status'] ?? 'Pending'; ?>
+                        <span class="badge <?php echo $curPayStatus === 'Paid' ? 'bg-success' : 'bg-danger'; ?>"><?php echo htmlspecialchars($curPayStatus); ?></span>
+                    </td>
+                </tr>
             </table>
 
             <form method="POST">
                 <input type="hidden" name="booking_id" value="<?php echo $guest['id']; ?>">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Payment Status</label>
+                    <select name="payment_status" class="form-select">
+                        <option value="Pending" <?php echo $curPayStatus === 'Pending' ? 'selected' : ''; ?>>Pending</option>
+                        <option value="Paid" <?php echo $curPayStatus === 'Paid' ? 'selected' : ''; ?>>Paid</option>
+                    </select>
+                </div>
                 <button type="submit" class="btn btn-success w-100 py-2 fw-bold">Confirm Check-In Now</button>
             </form>
         <?php else: ?>
@@ -170,6 +193,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <select name="payment_method" class="form-select">
                         <option value="Cash">Cash</option>
                         <option value="GCash">GCash</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Payment Status</label>
+                    <select name="payment_status" class="form-select">
+                        <option value="Pending">Pending</option>
+                        <option value="Paid">Paid</option>
                     </select>
                 </div>
                 <div class="col-md-6">

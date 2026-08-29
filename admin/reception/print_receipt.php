@@ -64,6 +64,7 @@ if (!$booking) {
         <p class="mb-1"><strong>Guest:</strong> <?php echo htmlspecialchars($booking['name']); ?></p>
         <p class="mb-1"><strong>Contact:</strong> <?php echo htmlspecialchars($booking['contact']); ?></p>
         <p class="mb-1"><strong>Payment Method:</strong> <?php echo htmlspecialchars($booking['payment_method']); ?></p>
+        <p class="mb-1"><strong>Payment Status:</strong> <?php echo htmlspecialchars($booking['payment_status'] ?? 'Pending'); ?></p>
         <p class="mb-1"><strong>Status:</strong> <?php echo htmlspecialchars($booking['status']); ?></p>
     </div>
 

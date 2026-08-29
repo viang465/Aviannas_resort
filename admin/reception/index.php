@@ -199,8 +199,17 @@ $result = $stmt->get_result();
                                     <?php 
                                         $payStatus = $row['payment_status'] ?? 'Pending';
                                         $payBadgeClass = ($payStatus === 'Paid') ? 'badge-paid' : 'badge-unpaid';
+                                        $redirectTarget = 'index.php' . (!empty($search) ? ('?search=' . urlencode($search)) : '');
                                     ?>
-                                    <span class="badge <?php echo $payBadgeClass; ?> px-2 py-1"><?php echo htmlspecialchars($payStatus); ?></span>
+                                    <form method="POST" action="update_payment_status.php" class="d-inline-flex align-items-center gap-1">
+                                        <input type="hidden" name="booking_id" value="<?php echo $row['id']; ?>">
+                                        <input type="hidden" name="redirect" value="<?php echo htmlspecialchars($redirectTarget); ?>">
+                                        <select name="payment_status" class="form-select form-select-sm <?php echo $payBadgeClass; ?> border-0 fw-semibold"
+                                                style="width:auto; padding-right:1.75rem;" onchange="this.form.submit()">
+                                            <option value="Pending" <?php echo $payStatus === 'Pending' ? 'selected' : ''; ?>>Pending</option>
+                                            <option value="Paid" <?php echo $payStatus === 'Paid' ? 'selected' : ''; ?>>Paid</option>
+                                        </select>
+                                    </form>
                                 </td>
                                 <td class="text-end">
                                     <?php if ($row['status'] === 'Approved' || $row['status'] === 'Pending'): ?>
