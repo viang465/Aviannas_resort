@@ -155,6 +155,7 @@ $result = $stmt->get_result();
                         <th>Check-In / Out</th>
                         <th>Total Fee</th>
                         <th>Status</th>
+                        <th>Payment Status</th>
                         <th class="text-end">Actions</th>
                     </tr>
                 </thead>
