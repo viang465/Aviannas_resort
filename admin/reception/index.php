@@ -40,6 +40,7 @@ $result = $stmt->get_result();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reception Desk | Avianna's Inland Resort</title>
+    <link rel="icon"  type="image/png" href="img/avianna.png" >
     
     <!-- Bootstrap 5 & Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -68,6 +69,8 @@ $result = $stmt->get_result();
         .badge-pending { background-color: #fef3c7; color: #92400e; }
         .badge-checkedin { background-color: #dbeafe; color: #1e40af; }
         .badge-checkedout { background-color: #e5e7eb; color: #374151; }
+        .badge-paid { background-color: #d1fae5; color: #065f46; }
+        .badge-unpaid { background-color: #fee2e2; color: #991b1b; }
     </style>
 </head>
 <body>
@@ -163,14 +166,14 @@ $result = $stmt->get_result();
                     <?php if ($result && $result->num_rows > 0): ?>
                         <?php while ($row = $result->fetch_assoc()): ?>
                             <tr>
-                                <td><strong>#<?php echo $row['id']; ?></strong></td>
+                                <td><strong>#<?php echo htmlspecialchars($row['id']); ?></strong></td>
                                 <td>
                                     <div class="fw-bold"><?php echo htmlspecialchars($row['name']); ?></div>
                                     <small class="text-muted"><i class="bi bi-telephone me-1"></i><?php echo htmlspecialchars($row['contact']); ?></small>
                                 </td>
                                 <td>
                                     <div><span class="badge bg-light text-dark border"><?php echo htmlspecialchars($row['room_type']); ?></span></div>
-                                    <?php if ($row['cottage_type'] !== 'None'): ?>
+                                    <?php if (isset($row['cottage_type']) && $row['cottage_type'] !== 'None'): ?>
                                         <small class="text-muted">+ <?php echo htmlspecialchars($row['cottage_type']); ?></small>
                                     <?php endif; ?>
                                 </td>
@@ -180,7 +183,7 @@ $result = $stmt->get_result();
                                 </td>
                                 <td>
                                     <strong class="text-success">₱<?php echo number_format($row['total_price'], 2); ?></strong>
-                                    <div class="small text-muted"><?php echo htmlspecialchars($row['payment_method']); ?></div>
+                                    <div class="small text-muted"><?php echo htmlspecialchars($row['payment_method'] ?? 'N/A'); ?></div>
                                 </td>
                                 <td>
                                     <?php 
@@ -191,6 +194,13 @@ $result = $stmt->get_result();
                                         elseif ($st === 'Checked Out') $badgeClass = 'badge-checkedout';
                                     ?>
                                     <span class="badge <?php echo $badgeClass; ?> px-2 py-1"><?php echo htmlspecialchars($st); ?></span>
+                                </td>
+                                <td>
+                                    <?php 
+                                        $payStatus = $row['payment_status'] ?? 'Pending';
+                                        $payBadgeClass = ($payStatus === 'Paid') ? 'badge-paid' : 'badge-unpaid';
+                                    ?>
+                                    <span class="badge <?php echo $payBadgeClass; ?> px-2 py-1"><?php echo htmlspecialchars($payStatus); ?></span>
                                 </td>
                                 <td class="text-end">
                                     <?php if ($row['status'] === 'Approved' || $row['status'] === 'Pending'): ?>
@@ -216,7 +226,7 @@ $result = $stmt->get_result();
                         <?php endwhile; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="7" class="text-center py-5 text-muted">
+                            <td colspan="8" class="text-center py-5 text-muted">
                                 <i class="bi bi-calendar-x display-5 d-block mb-2"></i>
                                 No arrivals or active stays found for today.
                             </td>
