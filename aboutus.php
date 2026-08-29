@@ -182,12 +182,12 @@
             <p class="lead text-center mx-auto mb-4" style="max-width: 800px;">Nestled in the heart of the countryside, Avianna's Inland Resort offers breathtaking views and a tranquil atmosphere perfect for your next escape.</p>
             
             <div class="map-container">
-                <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3920.123!2d122.5!3d10.8!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMTDCsDQ4JzAwLjAiTiAxMjLCsDMwJzAwLjAiRQ!5e0!3m2!1sen!2sph!4v1650000000000!5m2!1sen!2sph" height="450" style="border:0;" allowfullscreen="" loading="lazy"></iframe>
+                <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d579.3414830161042!2d122.53064800665541!3d10.79774391575876!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x33aefd05b0cf787b%3A0xe29cfc1c7abdb84c!2sAvianna%20Inland%20Resort!5e1!3m2!1sen!2sph!4v1787727271126!5m2!1sen!2sph" width="600" height="450" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>
             </div>
 
             <div class="text-center mt-4">
                 <p class="mb-1 fw-bold">Zone 6 Cabugao Sur Sta. Barbara, Iloilo City, Philippines</p>
-                <p class="mb-1">Email: <a href="mailto:aviannasinlandresort@gmail.com">aviannasinlandresort@gmail.com</a> | Phone: <a href="tel:+1234567890">+1 234 567 890</a></p>
+                <p class="mb-1">Email: <a href="mailto:aviannasinlandresort@gmail.com">aviannasinlandresort@gmail.com</a> | Phone: <a href="tel:+639388376967">09388376967</a></p>
             </div>
         </div>
     </div>
