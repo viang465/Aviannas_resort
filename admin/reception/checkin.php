@@ -33,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($booking_id > 0) {
         // Checking in an existing reservation
         $payment_status = $_POST['payment_status'] ?? 'Pending';
-        if (!in_array($payment_status, ['Paid', 'Pending'], true)) {
+        if (!in_array($payment_status, ['Paid', 'Partial', 'Pending'], true)) {
             $payment_status = 'Pending';
         }
 
@@ -61,7 +61,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $total_price = floatval($_POST['total_price'] ?? 0);
         $status      = 'Checked In';
         $payment_status = $_POST['payment_status'] ?? 'Pending';
-        if (!in_array($payment_status, ['Paid', 'Pending'], true)) {
+        if (!in_array($payment_status, ['Paid', 'Partial', 'Pending'], true)) {
             $payment_status = 'Pending';
         }
 
@@ -134,6 +134,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <label class="form-label fw-bold">Payment Status</label>
                     <select name="payment_status" class="form-select">
                         <option value="Pending" <?php echo $curPayStatus === 'Pending' ? 'selected' : ''; ?>>Pending</option>
+                        <option value="Partial" <?php echo $curPayStatus === 'Partial' ? 'selected' : ''; ?>>Partial</option>
                         <option value="Paid" <?php echo $curPayStatus === 'Paid' ? 'selected' : ''; ?>>Paid</option>
                     </select>
                 </div>
@@ -199,6 +200,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <label class="form-label">Payment Status</label>
                     <select name="payment_status" class="form-select">
                         <option value="Pending">Pending</option>
+                        <option value="Partial">Partial</option>
                         <option value="Paid">Paid</option>
                     </select>
                 </div>

@@ -11,6 +11,27 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
 // so a booking doesn't disappear from history the moment reception acts on it.
 $sql = "SELECT * FROM bookings WHERE status IN ('Approved', 'Checked In', 'Checked Out') ORDER BY checkin_date DESC";
 $result = $conn->query($sql);
+
+$bannerMsg = "";
+$bannerType = "success";
+if (isset($_GET['emailed']) && $_GET['emailed'] === 'success') {
+    $bannerMsg = "Confirmation email sent to the guest.";
+} elseif (isset($_GET['emailerr'])) {
+    $bannerType = "warning";
+    switch ($_GET['emailerr']) {
+        case 'notapproved':
+            $bannerMsg = "That booking isn't approved yet, so no confirmation email was sent.";
+            break;
+        case 'noemail':
+            $bannerMsg = "This guest has no email on file — couldn't send a confirmation.";
+            break;
+        case 'notfound':
+            $bannerMsg = "Booking not found.";
+            break;
+        default:
+            $bannerMsg = "Couldn't send the confirmation email. Please check your mail settings and try again.";
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -174,6 +195,17 @@ $result = $conn->query($sql);
             color: #4a5568;
         }
 
+        .pay-select {
+            width: auto;
+            font-weight: 600;
+            border-radius: 50px;
+            padding: 4px 10px;
+            font-size: 0.82rem;
+        }
+        .pay-pending { background: #fee2e2; color: #991b1b; border-color: #fecaca; }
+        .pay-partial { background: #fef3c7; color: #92400e; border-color: #fde68a; }
+        .pay-paid    { background: #d1fae5; color: #065f46; border-color: #a7f3d0; }
+
         @media (max-width: 992px) {
             .sidebar { width: 80px; padding: 20px 10px; }
             .sidebar h4, .nav-link span { display: none; }
@@ -208,6 +240,13 @@ $result = $conn->query($sql);
         <button class="btn btn-outline-success btn-sm" onclick="window.print()">Print Report</button>
     </div>
 
+    <?php if (!empty($bannerMsg)): ?>
+        <div class="alert alert-<?php echo $bannerType; ?> alert-dismissible fade show" role="alert">
+            <?php echo htmlspecialchars($bannerMsg); ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    <?php endif; ?>
+
     <div class="table-card">
         <table class="table table-hover align-middle mb-0">
             <thead>
@@ -217,6 +256,7 @@ $result = $conn->query($sql);
                     <th>Check-in</th>
                     <th>Check-out</th>
                     <th>Final Status</th>
+                    <th>Payment Status</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -247,10 +287,31 @@ $result = $conn->query($sql);
                             <?php endif; ?>
                         </td>
                         <td>
+                            <?php
+                                $payStatus = $row['payment_status'] ?? 'Pending';
+                                $payClass = 'pay-pending';
+                                if ($payStatus === 'Paid') $payClass = 'pay-paid';
+                                elseif ($payStatus === 'Partial') $payClass = 'pay-partial';
+                            ?>
+                            <form method="POST" action="reception/payment_status.php" class="d-inline-block m-0">
+                                <input type="hidden" name="booking_id" value="<?php echo $row['id']; ?>">
+                                <input type="hidden" name="redirect" value="../approve.php">
+                                <select name="payment_status" class="form-select form-select-sm pay-select <?php echo $payClass; ?>" onchange="this.form.submit()">
+                                    <option value="Pending" <?php echo $payStatus === 'Pending' ? 'selected' : ''; ?>>Pending</option>
+                                    <option value="Partial" <?php echo $payStatus === 'Partial' ? 'selected' : ''; ?>>Partial</option>
+                                    <option value="Paid" <?php echo $payStatus === 'Paid' ? 'selected' : ''; ?>>Paid</option>
+                                </select>
+                            </form>
+                        </td>
+                        <td>
                             <button type="button" class="btn btn-outline-primary btn-sm px-3 me-2 btn-view-details"
                                     data-booking='<?php echo htmlspecialchars(json_encode($row), ENT_QUOTES, "UTF-8"); ?>'>
                                 View
                             </button>
+                            <a href="send_confirmation.php?id=<?php echo $row['id']; ?>" class="btn btn-outline-info btn-sm px-3 me-2"
+                               onclick="return confirm('Send a confirmation email to this guest?');">
+                                <i class="bi bi-envelope-paper"></i> Email
+                            </a>
                             <?php if ($row['status'] === 'Approved'): ?>
                                 <a href="../admin/reception/checkin.php?id=<?php echo $row['id']; ?>" class="btn btn-outline-success btn-sm px-3 me-2">
                                     <i class="bi bi-box-arrow-in-right"></i> Check In
@@ -270,7 +331,7 @@ $result = $conn->query($sql);
                     <?php endwhile; ?>
                 <?php else: ?>
                     <tr>
-                        <td colspan="6" class="text-center py-5 text-muted">
+                        <td colspan="7" class="text-center py-5 text-muted">
                             No approved history found in the database.
                         </td>
                     </tr>
@@ -315,7 +376,8 @@ $result = $conn->query($sql);
                 ['Check-out', b.checkout_date || 'N/A'],
                 ['Payment Method', b.payment_method || 'N/A'],
                 ['Total Price', b.total_price ? '₱' + Number(b.total_price).toLocaleString(undefined, {minimumFractionDigits: 2}) : 'N/A'],
-                ['Status', b.status || 'Pending']
+                ['Status', b.status || 'Pending'],
+                ['Payment Status', b.payment_status || 'Pending']
             ];
             document.getElementById('customerDetailsBody').innerHTML = rows.map(function (r) {
                 return '<div class="d-flex justify-content-between py-2 border-bottom">' +

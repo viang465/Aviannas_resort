@@ -13,7 +13,7 @@ $payment_status = $_POST['payment_status'] ?? 'Pending';
 $redirect       = $_POST['redirect'] ?? 'index.php';
 
 // Whitelist the allowed values
-if (!in_array($payment_status, ['Paid', 'Pending'], true)) {
+if (!in_array($payment_status, ['Paid', 'Partial', 'Pending'], true)) {
     $payment_status = 'Pending';
 }
 

@@ -22,10 +22,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $guest = $stmt->get_result()->fetch_assoc();
     $stmt->close();
 
+    $payment_status = $_POST['payment_status'] ?? 'Pending';
+    if (!in_array($payment_status, ['Paid', 'Partial', 'Pending'], true)) {
+        $payment_status = 'Pending';
+    }
+
     if ($guest) {
-        // 2. Update status to Approved
-        $update = $conn->prepare("UPDATE bookings SET status='Approved' WHERE id=?");
-        $update->bind_param("i", $id);
+        // 2. Update status to Approved (and record the payment status at confirmation time)
+        $update = $conn->prepare("UPDATE bookings SET status='Approved', payment_status=? WHERE id=?");
+        $update->bind_param("si", $payment_status, $id);
 
         if ($update->execute()) {
             $update->close();
@@ -44,12 +49,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $baseUrl  = rtrim($protocol . $_SERVER['HTTP_HOST'] . dirname(dirname($_SERVER['SCRIPT_NAME'])), '/');
                 $confirmationLink = $baseUrl . '/confirmation.php?id=' . $id;
 
+                $payLine = "Your payment status is currently marked as <strong>" . htmlspecialchars($payment_status) . "</strong>.";
+                if ($payment_status === 'Paid') {
+                    $payLine = "We have you down as <strong>fully paid</strong>. Thank you!";
+                } elseif ($payment_status === 'Partial') {
+                    $payLine = "We have received a <strong>partial payment</strong> for this booking. The remaining balance is due upon check-in.";
+                } else {
+                    $payLine = "Payment is still <strong>pending</strong>. Please settle it upon check-in or contact us to arrange payment in advance.";
+                }
+
                 $message = "
                 <html>
                 <body style='font-family: Arial, sans-serif;'>
                     <h2>Reservation Confirmed!</h2>
                     <p>Dear " . htmlspecialchars($guest['name']) . ",</p>
                     <p>Your booking for a <strong>" . htmlspecialchars($guest['room_type']) . "</strong> from <strong>" . htmlspecialchars($guest['checkin_date']) . "</strong> to <strong>" . htmlspecialchars($guest['checkout_date']) . "</strong> has been officially approved.</p>
+                    <p>" . $payLine . "</p>
                     <p>You can view or print your booking confirmation here: <a href='" . $confirmationLink . "'>View Confirmation</a></p>
                     <p>We look forward to welcoming you to Avianna's Inland Resort!</p>
                 </body>
@@ -154,6 +169,15 @@ if (!$booking) {
     </div>
 
     <form method="POST">
+        <div class="mt-3 mb-2 text-start">
+            <label class="detail-label d-block mb-1">Payment Status</label>
+            <?php $curPayStatus = $booking['payment_status'] ?? 'Pending'; ?>
+            <select name="payment_status" class="form-select">
+                <option value="Pending" <?php echo $curPayStatus === 'Pending' ? 'selected' : ''; ?>>Pending — not yet paid</option>
+                <option value="Partial" <?php echo $curPayStatus === 'Partial' ? 'selected' : ''; ?>>Partial — deposit received</option>
+                <option value="Paid" <?php echo $curPayStatus === 'Paid' ? 'selected' : ''; ?>>Paid — fully paid</option>
+            </select>
+        </div>
         <button type="submit" class="btn-confirm">Confirm and Notify Guest</button>
     </form>
     <a href="admin.php" class="btn-back">← Back to Dashboard</a>

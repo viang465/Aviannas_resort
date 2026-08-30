@@ -71,6 +71,7 @@ $result = $stmt->get_result();
         .badge-checkedout { background-color: #e5e7eb; color: #374151; }
         .badge-paid { background-color: #d1fae5; color: #065f46; }
         .badge-unpaid { background-color: #fee2e2; color: #991b1b; }
+        .badge-partial { background-color: #fef3c7; color: #92400e; }
     </style>
 </head>
 <body>
@@ -198,7 +199,9 @@ $result = $stmt->get_result();
                                 <td>
                                     <?php 
                                         $payStatus = $row['payment_status'] ?? 'Pending';
-                                        $payBadgeClass = ($payStatus === 'Paid') ? 'badge-paid' : 'badge-unpaid';
+                                        $payBadgeClass = 'badge-unpaid';
+                                        if ($payStatus === 'Paid') $payBadgeClass = 'badge-paid';
+                                        elseif ($payStatus === 'Partial') $payBadgeClass = 'badge-partial';
                                         $redirectTarget = 'index.php' . (!empty($search) ? ('?search=' . urlencode($search)) : '');
                                     ?>
                                     <form method="POST" action="payment_status.php" class="d-inline-flex align-items-center gap-1">
@@ -207,6 +210,7 @@ $result = $stmt->get_result();
                                         <select name="payment_status" class="form-select form-select-sm <?php echo $payBadgeClass; ?> border-0 fw-semibold"
                                                 style="width:auto; padding-right:1.75rem;" onchange="this.form.submit()">
                                             <option value="Pending" <?php echo $payStatus === 'Pending' ? 'selected' : ''; ?>>Pending</option>
+                                            <option value="Partial" <?php echo $payStatus === 'Partial' ? 'selected' : ''; ?>>Partial</option>
                                             <option value="Paid" <?php echo $payStatus === 'Paid' ? 'selected' : ''; ?>>Paid</option>
                                         </select>
                                     </form>
