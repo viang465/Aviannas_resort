@@ -201,7 +201,7 @@ $result = $stmt->get_result();
                                         $payBadgeClass = ($payStatus === 'Paid') ? 'badge-paid' : 'badge-unpaid';
                                         $redirectTarget = 'index.php' . (!empty($search) ? ('?search=' . urlencode($search)) : '');
                                     ?>
-                                    <form method="POST" action="update_payment_status.php" class="d-inline-flex align-items-center gap-1">
+                                    <form method="POST" action="payment_status.php" class="d-inline-flex align-items-center gap-1">
                                         <input type="hidden" name="booking_id" value="<?php echo $row['id']; ?>">
                                         <input type="hidden" name="redirect" value="<?php echo htmlspecialchars($redirectTarget); ?>">
                                         <select name="payment_status" class="form-select form-select-sm <?php echo $payBadgeClass; ?> border-0 fw-semibold"
