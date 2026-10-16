@@ -1,6 +1,7 @@
 <?php
 session_start();
-include "../conn.php"; 
+include "../conn.php";
+include "../accommodations.php"; // shared room/cottage catalog — same one book.php uses
 
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
     header("Location: login.php");
@@ -19,43 +20,40 @@ if ($id > 0) {
     $stmt->close();
 }
 
-// Room pricing array for automated total calculation
-// Must match the accommodation options offered on the public book.php form
-$room_prices = [
-    'None'                  => 0.00,
-    'Overnight Room'        => 2500.00,
-    'Poolside Pavilion'     => 2200.00,
-    'Pavilion 1'            => 2000.00,
-    'Pavilion Overlooking'  => 2500.00,
-    'Old Pavilion'          => 2000.00,
-    'New Pavilion'          => 3500.00,
-];
+// Pricing, derived from the shared catalog — always matches the public booking form.
+$prices = accommodations_price_table($accommodations);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $name           = trim($_POST['name']);
     $email          = trim($_POST['email']);
     $contact        = trim($_POST['contact']);
     $address        = trim($_POST['address']);
-    $room_type      = trim($_POST['room_type']);
+    $room_type      = trim($_POST['room_type']    ?? 'None');
+    $cottage_type   = trim($_POST['cottage_type'] ?? 'None');
     $checkin_date   = trim($_POST['checkin_date']);
     $checkout_date  = trim($_POST['checkout_date']);
     $payment_method = trim($_POST['payment_method']);
 
-    if (empty($name) || empty($email) || empty($room_type) || empty($checkin_date) || empty($checkout_date)) {
+    if (empty($name) || empty($email) || empty($checkin_date) || empty($checkout_date)) {
         $error_msg = "Please fill in all required fields.";
     } else {
-        // Calculate days stayed
+        // Calculate nights stayed (same-day/day-use counts as 1 night, matching book.php)
         $start = new DateTime($checkin_date);
         $end   = new DateTime($checkout_date);
-        $days  = max(1, $start->diff($end)->days);
-        
-        $price_per_night = $room_prices[$room_type] ?? 2000.00;
-        $total_price     = $days * $price_per_night;
+        $nights = max(1, $start->diff($end)->days);
+
+        $room_price    = $prices['room'][$room_type]       ?? 0.00;
+        $cottage_price = $prices['cottage'][$cottage_type]  ?? 0.00;
+        $cottage_meta  = accommodations_find_by_value($accommodations, $cottage_type);
+        if ($cottage_meta && !empty($cottage_meta['elec'])) {
+            $cottage_price += $cottage_meta['elec'];
+        }
+        $total_price = ($room_price * $nights) + $cottage_price;
 
         if ($id > 0) {
             // Update existing booking
-            $stmt = $conn->prepare("UPDATE bookings SET name=?, email=?, contact=?, address=?, room_type=?, checkin_date=?, checkout_date=?, payment_method=?, total_price=? WHERE id=?");
-            $stmt->bind_param("ssssssssdi", $name, $email, $contact, $address, $room_type, $checkin_date, $checkout_date, $payment_method, $total_price, $id);
+            $stmt = $conn->prepare("UPDATE bookings SET name=?, email=?, contact=?, address=?, room_type=?, cottage_type=?, checkin_date=?, checkout_date=?, payment_method=?, total_price=? WHERE id=?");
+            $stmt->bind_param("sssssssssdi", $name, $email, $contact, $address, $room_type, $cottage_type, $checkin_date, $checkout_date, $payment_method, $total_price, $id);
             if ($stmt->execute()) {
                 $stmt->close();
                 header("Location: admin.php?booking=updated");
@@ -66,8 +64,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             // Create new booking
             $status = 'Pending';
-            $stmt = $conn->prepare("INSERT INTO bookings (name, email, contact, address, room_type, checkin_date, checkout_date, payment_method, total_price, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-            $stmt->bind_param("ssssssssds", $name, $email, $contact, $address, $room_type, $checkin_date, $checkout_date, $payment_method, $total_price, $status);
+            $stmt = $conn->prepare("INSERT INTO bookings (name, email, contact, address, room_type, cottage_type, checkin_date, checkout_date, payment_method, total_price, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmt->bind_param("sssssssssds", $name, $email, $contact, $address, $room_type, $cottage_type, $checkin_date, $checkout_date, $payment_method, $total_price, $status);
             if ($stmt->execute()) {
                 $stmt->close();
                 header("Location: admin.php?booking=created");
@@ -123,11 +121,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <input type="text" name="address" class="form-control" value="<?php echo htmlspecialchars($booking['address'] ?? ''); ?>">
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label fw-semibold">Room Type *</label>
-                    <select name="room_type" class="form-select" required>
-                        <?php foreach (array_keys($room_prices) as $type): ?>
-                            <option value="<?php echo $type; ?>" <?php echo (isset($booking['room_type']) && $booking['room_type'] === $type) ? 'selected' : ''; ?>>
-                                <?php echo $type; ?>
+                    <label class="form-label fw-semibold">Room / Pavilion Type</label>
+                    <select name="room_type" class="form-select">
+                        <option value="None" <?php echo (empty($booking['room_type']) || $booking['room_type'] === 'None') ? 'selected' : ''; ?>>No Accommodation</option>
+                        <?php foreach ($accommodations as $item): if ($item['type'] !== 'room') continue; ?>
+                            <option value="<?php echo htmlspecialchars($item['value'], ENT_QUOTES, 'UTF-8'); ?>"
+                                    <?php echo (isset($booking['room_type']) && $booking['room_type'] === $item['value']) ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($item['title'], ENT_QUOTES, 'UTF-8'); ?> — ₱<?php echo number_format($item['price']); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Cottage Type</label>
+                    <select name="cottage_type" class="form-select">
+                        <option value="None" <?php echo (empty($booking['cottage_type']) || $booking['cottage_type'] === 'None') ? 'selected' : ''; ?>>No Cottage</option>
+                        <?php foreach ($accommodations as $item): if ($item['type'] !== 'cottage') continue; ?>
+                            <option value="<?php echo htmlspecialchars($item['value'], ENT_QUOTES, 'UTF-8'); ?>"
+                                    <?php echo (isset($booking['cottage_type']) && $booking['cottage_type'] === $item['value']) ? 'selected' : ''; ?>>
+                                <?php
+                                    echo htmlspecialchars($item['title'], ENT_QUOTES, 'UTF-8');
+                                    echo ' — ₱' . number_format($item['price']);
+                                    if (!empty($item['elec'])) echo ' + ₱' . number_format($item['elec']) . ' elec';
+                                ?>
                             </option>
                         <?php endforeach; ?>
                     </select>

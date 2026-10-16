@@ -2,6 +2,11 @@
 session_start();
 require_once '../../conn.php';
 
+if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], ['admin', 'staff'], true)) {
+    header('Location: ../login.php');
+    exit();
+}
+
 $message = "";
 $error = "";
 
@@ -40,7 +45,7 @@ $result = $stmt->get_result();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reception Desk | Avianna's Inland Resort</title>
-    <link rel="icon"  type="image/png" href="img/avianna.png" >
+    <link rel="icon"  type="image/png" href="../../img/avianna.png" >
     
     <!-- Bootstrap 5 & Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -89,7 +94,7 @@ $result = $stmt->get_result();
                     <i class="bi bi-speedometer2 me-1"></i> Admin Panel
                 </a>
             <?php endif; ?>
-            <a href="../index.php" class="btn btn-sm btn-outline-light rounded-pill"><i class="bi bi-box-arrow-right me-1"></i> Exit</a>
+            <a href="../../index.php" class="btn btn-sm btn-outline-light rounded-pill"><i class="bi bi-box-arrow-right me-1"></i> Exit</a>
         </div>
     </div>
 </nav>
@@ -230,7 +235,7 @@ $result = $stmt->get_result();
                                         </a>
                                     <?php endif; ?>
                                     <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
-                                        <a href="../admin/manage_booking.php?id=<?php echo $row['id']; ?>" class="btn btn-sm btn-outline-primary rounded-pill px-3 ms-1">
+                                        <a href="../manage_booking.php?id=<?php echo $row['id']; ?>" class="btn btn-sm btn-outline-primary rounded-pill px-3 ms-1">
                                             <i class="bi bi-pencil-square me-1"></i> Edit
                                         </a>
                                     <?php endif; ?>

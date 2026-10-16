@@ -2,6 +2,11 @@
 session_start();
 require_once '../../conn.php';
 
+if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], ['admin', 'staff'], true)) {
+    header('Location: ../login.php');
+    exit();
+}
+
 $booking_id = intval($_GET['id'] ?? 0);
 $guest = null;
 $error = "";
@@ -47,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $guest && $guest['status'] === 'Che
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Guest Check-Out | Reception</title>
-    <link rel="icon"  type="image/png" href="img/avianna.png" >
+    <link rel="icon"  type="image/png" href="../../img/avianna.png" >
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <style>

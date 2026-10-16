@@ -166,6 +166,8 @@ $result = $conn->query($sql);
         <a class="nav-link active" href="admin_cancelled.php"><span>Cancellation History</span></a>
         <a class="nav-link" href="admin_announcements.php"><span>Announcements</span></a>
         <a class="nav-link" href="admin_analytics.php"><span>Dashboard</span></a>
+        <a class="nav-link" href="admin_walkin.php"><span>Walk in</sapn></a>
+        <a class="nav-link" href="admin_expenses.php"><span>Daily Expenses</span></a>
         <hr style="border-color: rgba(255,255,255,0.1); margin: 20px 0;">
         <a class="nav-link text-info" href="../admin/reception/index.php"><span>🛎 Front Desk</span></a>
         <a class="nav-link text-warning" href="../index.php" target="_blank"><span>← View Website</span></a>

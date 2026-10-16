@@ -2,6 +2,11 @@
 session_start();
 require_once '../../conn.php';
 
+if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], ['admin', 'staff'], true)) {
+    header('Location: ../login.php');
+    exit();
+}
+
 // Only accept POST requests
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header("Location: index.php");

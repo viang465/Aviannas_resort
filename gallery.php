@@ -1,116 +1,9 @@
 <?php 
 include "conn.php"; 
 
-// Define Gallery Data — paths explicitly synchronized for case safety
-$gallery_items = [
-    [
-        "title" => "Cottage 1,2,3",
-        "desc"  => "Relax and unwind in our classic, native-style bamboo cottage.",
-        "cover" => "img/Cottage123_1.jpg",
-        "photos" => [
-            "img/Cottage123_1.jpg",
-            "img/Cottage123_2.jpg",
-            "img/Cottage123_3.jpg",
-            "img/Cottage123_4.jpg",
-            "img/Cottage123_5.jpg",
-            "img/Cottage123_6.jpg",
-        ]
-    ],
-    [
-        "title" => "Cottage 5",
-        "desc"  => "Perfect for family gatherings and outdoor picnics.",
-        "cover" => "img/Cottage_5_1.jpg",
-        "photos" => [
-            "img/Cottage_5_1.jpg",
-            "img/Cottage_5_2.jpg",
-            "img/Cottage_5_3.jpg",
-            
-        ]
-    ],
-    [
-        "title" => "Cottage 6",
-        "desc"  => "Enjoy the local breeze in our affordable native cottages.",
-        "cover" => "img/Cottage_6_1.jpg",
-        "photos" => [
-            "img/Cottage_6_1.jpg",
-            "img/Cottage_6_2.jpg",
-            "img/Cottage_6_3.jpg",
-        ]
-    ],
-    [
-        "title" => "Large Pavillion",
-        "desc"  => "Ideal for events, workshops, or group activities with a spacious open-air design.",
-        "cover" => "img/LargePavillion_1.jpg",
-        "photos" => [
-            "img/LargePavillion_1.jpg",
-            "img/LargePavillion_2.jpg",
-            "img/LargePavillion_3.jpg",
-            "img/LargePavillion_4.jpg",
-        ]
-    ],
-    [
-        "title" => "Overnight ",
-        "desc"  => "Spacious wooden table arrangements and long benches.",
-        "cover" => "img/Overnight_1.jpg",
-        "photos" => [
-            "img/Overnight_1.jpg",
-            "img/Overnight_2.jpg",
-            "img/Overnight_3.jpg",
-            "img/Overnight_4.jpg",
-            "img/Overnight_5.jpg",
-            "img/Overnight_6.jpg",
-        ]
-    ],
-    [
-        "title" => "Pavilion_ 1",
-        "desc"  => "Shaded, comfortable bamboo flooring perfect for resting.",
-        "cover" => "img/Semi_open_1.jpg",
-        "photos" => [
-            "img/Semi_open_1.jpg",
-            "img/Semi_open_2.jpg",
-            "img/Semi_open_3.jpg",
-            "img/Semi_open_4.jpg",
-        ]
-    ],
-    [
-        "title" => "Poolside_Pavilion",
-        "desc"  => "Shaded, comfortable bamboo flooring perfect for resting.",
-        "cover" => "img/PoolSide_1.jpg",
-        "photos" => [
-            "img/PoolSide_1.jpg",
-            "img/PoolSide_2.jpg",
-            "img/PoolSide_3.jpg",
-            "img/PoolSide_4.jpg",
-            "img/PoolSide_5.jpg",
-            "img/PoolSide_6.jpg",
-            "img/PoolSide_7.jpg",
-        ]
-    ],
-    [
-        "title" => "Private SoundProof Room",
-        "desc"  => "The perfect space for meetings, workshops, or intimate gatherings.",
-        "cover" => "img/SoundProof_1.jpg",
-        "photos" => [
-            "img/SoundProof_1.jpg",
-            "img/SoundProof_2.jpg",
-            "img/SoundProof_3.jpg",
-            "img/SoundProof_4.jpg",
-            "img/SoundProof_5.jpg",
-        ]
-    ],
-    [
-        "title" => "Tee pee hut",
-        "desc"  => "Take a refreshing dip in our inviting swimming pool.",
-        "cover" => "img/Tee_put_1.jpg",
-        "photos" => [
-            "img/Tee_put_1.jpg",
-            "img/Tee_put_2.jpg",
-            "img/Tee_put_3.jpg",
-            "img/Tee_put_4.jpg",
-            "img/Tee_put_5.jpg",
-        ]
-    ]
-];
+// Gallery data is managed from the admin panel (admin/admin_gallery.php).
+require_once __DIR__ . '/gallery_data.php';
+$gallery_items = gallery_load_items($conn, true, '');
 ?>
 
 <!DOCTYPE html>
@@ -119,7 +12,6 @@ $gallery_items = [
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gallery | Avianna's Inland Resort</title>
-    <link rel="icon"  type="image/png" href="img/avianna.png" >
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
@@ -138,6 +30,7 @@ $gallery_items = [
     .navbar {
         background-color: var(--tropical-green) !important;
         box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 1030;
     }
 
     .header-gallery {
@@ -304,6 +197,12 @@ $gallery_items = [
                         <div class="overlay-text">
                             <h4><?php echo htmlspecialchars($item['title'], ENT_QUOTES, 'UTF-8'); ?></h4>
                             <p><?php echo htmlspecialchars($item['desc'], ENT_QUOTES, 'UTF-8'); ?></p>
+                            <?php if (!empty($item['pax'])): ?>
+                            <p><?php echo htmlspecialchars($item['pax'], ENT_QUOTES, 'UTF-8'); ?></p>
+                            <?php endif; ?>
+                            <?php if (!empty($item['price'])): ?>
+                            <p><?php echo htmlspecialchars($item['price'], ENT_QUOTES, 'UTF-8'); ?></p>
+                            <?php endif; ?>
                             <div class="view-btn">
                                 <span class="badge bg-warning text-dark px-3 py-2" style="font-size:0.8rem;">
                                     📷 View <?php echo count($item['photos']); ?> Photo<?php echo count($item['photos']) > 1 ? 's' : ''; ?>

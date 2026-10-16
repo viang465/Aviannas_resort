@@ -36,6 +36,7 @@
         .navbar {
             background-color: var(--tropical-green) !important;
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            z-index: 1030;
         }
 
         .navbar-brand { 
@@ -111,6 +112,157 @@
         .fb-link:hover {
             color: var(--accent-gold) !important;
         }
+
+        /* ===== Gallery ===== */
+        .gallery-section-title {
+            color: var(--tropical-green);
+        }
+
+        .gallery-card {
+            position: relative;
+            border-radius: 16px;
+            overflow: hidden;
+            cursor: pointer;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+            transition: transform 0.35s ease, box-shadow 0.35s ease;
+        }
+
+        .gallery-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 14px 28px rgba(0,0,0,0.22);
+        }
+
+        .gallery-img-container {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 4 / 3;
+            overflow: hidden;
+        }
+
+        .gallery-img-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+
+        .gallery-card:hover .gallery-img-container img {
+            transform: scale(1.08);
+        }
+
+        .gallery-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, rgba(14,42,29,0.05) 0%, rgba(14,42,29,0.9) 100%);
+            display: flex;
+            align-items: flex-end;
+            opacity: 0;
+            transition: opacity 0.35s ease;
+        }
+
+        .gallery-card:hover .gallery-overlay {
+            opacity: 1;
+        }
+
+        .overlay-text {
+            color: #fff;
+            padding: 1.25rem;
+            width: 100%;
+            transform: translateY(10px);
+            transition: transform 0.35s ease;
+        }
+
+        .gallery-card:hover .overlay-text {
+            transform: translateY(0);
+        }
+
+        .overlay-text h4 {
+            font-family: 'Playfair Display', serif;
+            margin-bottom: 0.25rem;
+        }
+
+        .overlay-text p {
+            margin-bottom: 0.15rem;
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .overlay-text .view-btn {
+            margin-top: 0.5rem;
+        }
+
+        /* Lightbox modal */
+        #lightboxModal .modal-content {
+            border-radius: 16px;
+            border: none;
+        }
+
+        #lightbox-main {
+            width: 100%;
+            max-height: 60vh;
+            object-fit: contain;
+            border-radius: 10px;
+            background: #000;
+        }
+
+        .lb-nav {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1.5rem;
+            margin-top: 0.75rem;
+        }
+
+        .lb-nav button {
+            background: var(--tropical-green);
+            color: #fff;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .lb-nav button:hover {
+            background: var(--accent-gold);
+            color: var(--deep-palm);
+        }
+
+        .lb-counter {
+            font-weight: 600;
+            color: var(--tropical-green);
+        }
+
+        .thumb-strip {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            overflow-x: auto;
+            padding-bottom: 0.25rem;
+        }
+
+        .thumb-strip img {
+            width: 70px;
+            height: 55px;
+            object-fit: cover;
+            border-radius: 8px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            opacity: 0.7;
+            transition: all 0.25s ease;
+            flex-shrink: 0;
+        }
+
+        .thumb-strip img:hover {
+            opacity: 1;
+        }
+
+        .thumb-strip img.active-thumb {
+            border-color: var(--accent-gold);
+            opacity: 1;
+        }
     </style>
 </head>
 <body>
@@ -183,7 +335,7 @@ if ($announcementQuery && $announcementQuery->num_rows > 0):
             <div class="col-md-6 col-lg-4">
                 <div class="p-3 border rounded shadow-sm bg-white">
                     <h5 class="fw-bold mb-2">🕒 Operating Hours</h5>
-                    <p class="mb-0 text-dark">Open Daily: <strong>8:00 AM - 10:00 PM</strong></p>
+                    <p class="mb-0 text-dark">Open Daily: <strong>8:00 AM - 8:00 PM</strong></p>
                     <small class="text-muted d-block">Book your stay 2-3 days in advance</small>
                     <small class="text-muted">*Hours may vary on holidays</small>
                 </div>
@@ -193,6 +345,83 @@ if ($announcementQuery && $announcementQuery->num_rows > 0):
         <a href="aboutus.php" class="btn btn-outline-dark rounded-pill px-4">Learn More About Us</a>
     </div>
 </main>
+
+<?php
+/**
+ * Gallery data for the homepage preview.
+ *
+ * The photos are now managed from the admin panel:
+ *   Admin Portal -> Resort Gallery (admin/admin_gallery.php)
+ *
+ * gallery_data.php reads the `gallery_items` / `gallery_photos` tables,
+ * creates + seeds them automatically on first run, and falls back to the
+ * original built-in photos if the database is unavailable.
+ */
+require_once __DIR__ . '/gallery_data.php';
+$gallery_items = gallery_load_items($conn, true, '');
+?>
+
+<section class="container my-5">
+    <h2 class="fw-bold text-center mb-2 gallery-section-title">Explore Our Resort</h2>
+    <p class="text-center text-muted mb-5">A glimpse of the spaces waiting for you at Avianna's.</p>
+
+    <main class="row g-4">
+        <?php foreach ($gallery_items as $index => $item): ?>
+        <div class="col-lg-4 col-md-6 col-sm-12">
+            <div class="gallery-card"
+                 onclick="openLightbox(<?php echo $index; ?>)"
+                 role="button"
+                 aria-label="View photos of <?php echo htmlspecialchars($item['title'], ENT_QUOTES, 'UTF-8'); ?>">
+                <div class="gallery-img-container">
+                    <img src="<?php echo htmlspecialchars($item['cover'], ENT_QUOTES, 'UTF-8'); ?>"
+                         alt="<?php echo htmlspecialchars($item['title'], ENT_QUOTES, 'UTF-8'); ?>">
+                    <div class="gallery-overlay">
+                        <div class="overlay-text">
+                            <h4><?php echo htmlspecialchars($item['title'], ENT_QUOTES, 'UTF-8'); ?></h4>
+                            <p><?php echo htmlspecialchars($item['desc'], ENT_QUOTES, 'UTF-8'); ?></p>
+                            <?php if (!empty($item['pax'])): ?>
+                            <p><?php echo htmlspecialchars($item['pax'], ENT_QUOTES, 'UTF-8'); ?></p>
+                            <?php endif; ?>
+                            <?php if (!empty($item['price'])): ?>
+                            <p><?php echo htmlspecialchars($item['price'], ENT_QUOTES, 'UTF-8'); ?></p>
+                            <?php endif; ?>
+                            <div class="view-btn">
+                                <span class="badge bg-warning text-dark px-3 py-2" style="font-size:0.8rem;">
+                                    📷 View <?php echo count($item['photos']); ?> Photo<?php echo count($item['photos']) > 1 ? 's' : ''; ?>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php endforeach; ?>
+    </main>
+</section>
+
+<div class="modal fade" id="lightboxModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content p-3">
+            <div class="modal-header">
+                <h5 class="modal-title" id="lightbox-title">Cottage</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <img id="lightbox-main" src="" alt="Gallery Photo">
+
+                <div class="lb-nav" id="lb-nav-row">
+                    <button onclick="lbStep(-1)" title="Previous">&#8592;</button>
+                    <span class="lb-counter" id="lb-counter"></span>
+                    <button onclick="lbStep(1)"  title="Next">&#8594;</button>
+                </div>
+
+                <div class="thumb-strip" id="thumb-strip"></div>
+
+                <p id="lightbox-desc" class="mt-3 mb-0" style="font-size:0.9rem;opacity:0.8;"></p>
+            </div>
+        </div>
+    </div>
+</div>
 
 <footer class="bg-dark text-white text-center py-4">
     <div class="container">
@@ -209,6 +438,79 @@ if ($announcementQuery && $announcementQuery->num_rows > 0):
 
 <!-- External JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    // Gallery data passed from PHP to JS for the lightbox
+    const galleryData = <?php echo json_encode(array_values($gallery_items), JSON_UNESCAPED_SLASHES); ?>;
+
+    let currentItemIndex = 0;
+    let currentPhotoIndex = 0;
+    let lightboxModalInstance = null;
+
+    function getModal() {
+        if (!lightboxModalInstance) {
+            lightboxModalInstance = new bootstrap.Modal(document.getElementById('lightboxModal'));
+        }
+        return lightboxModalInstance;
+    }
+
+    function openLightbox(itemIndex) {
+        currentItemIndex = itemIndex;
+        currentPhotoIndex = 0;
+        renderLightbox();
+        getModal().show();
+    }
+
+    function renderLightbox() {
+        const item = galleryData[currentItemIndex];
+        if (!item) return;
+
+        const photos = item.photos && item.photos.length ? item.photos : [item.cover];
+
+        document.getElementById('lightbox-title').textContent = item.title;
+        document.getElementById('lightbox-desc').textContent = item.desc || '';
+        document.getElementById('lightbox-main').src = photos[currentPhotoIndex];
+        document.getElementById('lightbox-main').alt = item.title;
+        document.getElementById('lb-counter').textContent = (currentPhotoIndex + 1) + ' / ' + photos.length;
+
+        // Hide prev/next controls entirely if there's only one photo
+        document.getElementById('lb-nav-row').style.display = photos.length > 1 ? 'flex' : 'none';
+
+        // Build thumbnail strip
+        const strip = document.getElementById('thumb-strip');
+        strip.innerHTML = '';
+        if (photos.length > 1) {
+            photos.forEach((src, i) => {
+                const thumb = document.createElement('img');
+                thumb.src = src;
+                thumb.alt = item.title + ' thumbnail ' + (i + 1);
+                if (i === currentPhotoIndex) thumb.classList.add('active-thumb');
+                thumb.onclick = () => {
+                    currentPhotoIndex = i;
+                    renderLightbox();
+                };
+                strip.appendChild(thumb);
+            });
+        }
+    }
+
+    function lbStep(direction) {
+        const item = galleryData[currentItemIndex];
+        if (!item) return;
+        const photos = item.photos && item.photos.length ? item.photos : [item.cover];
+
+        currentPhotoIndex = (currentPhotoIndex + direction + photos.length) % photos.length;
+        renderLightbox();
+    }
+
+    // Keyboard navigation while the lightbox is open
+    document.addEventListener('keydown', (e) => {
+        const modalEl = document.getElementById('lightboxModal');
+        if (!modalEl.classList.contains('show')) return;
+        if (e.key === 'ArrowLeft') lbStep(-1);
+        if (e.key === 'ArrowRight') lbStep(1);
+    });
+</script>
 
 </body>
 </html>

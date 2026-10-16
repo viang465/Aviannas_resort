@@ -6,6 +6,9 @@ $error = "";
 if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
     header("Location: admin.php");
     exit();
+} elseif (isset($_SESSION['role']) && $_SESSION['role'] === 'staff') {
+    header("Location: reception/index.php");
+    exit();
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -23,7 +26,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 session_regenerate_id(true);
                 $_SESSION['username'] = $user['username'];
                 $_SESSION['role'] = $user['role'];
-                header("Location: admin.php");
+                
+                // Fixed logic: Handles routing accurately based on role types
+                if ($user['role'] === 'staff') {
+                    header("Location: reception/index.php");
+                } elseif ($user['role'] === 'admin') {
+                    header("Location: admin.php");
+                } else {
+                    // Safety fallback if role is neither admin nor staff
+                    header("Location: ../index.php");
+                }
                 exit();
             } else { $error = "Invalid credentials!"; }
         } else { $error = "Invalid credentials!"; }
@@ -39,6 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://jsdelivr.net">
 
     <style>
         :root {
@@ -57,7 +70,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             margin: 0;
         }
 
-        /* --- HIDE THE ARROW ICON (Scroll to top buttons) --- */
         #scrollUp, .scroll-to-top, .back-to-top, [id*="scroll"], button[title*="top"] {
             display: none !important;
             visibility: hidden !important;
@@ -115,6 +127,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .form-control:focus {
             border-color: var(--admin-teal);
             box-shadow: 0 0 0 0.25rem rgba(26, 71, 49, 0.1);
+        }
+
+        /* Styling for the eye toggle icon */
+        .password-wrapper {
+            position: relative;
+        }
+        
+        .password-toggle {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #666;
+            z-index: 10;
+        }
+
+        .password-toggle:hover {
+            color: var(--admin-teal);
         }
 
         .btn-primary {
@@ -177,7 +208,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     
                     <div class="mb-4">
                         <label for="password" class="form-label">Password</label>
-                        <input type="password" name="password" class="form-control" id="password" placeholder="Enter password" required>
+                        <div class="password-wrapper">
+                            <input type="password" name="password" class="form-control" id="password" placeholder="Enter password" required>
+                            <i class="bi bi-eye-slash password-toggle" id="togglePassword"></i>
+                        </div>
                     </div>
 
                     <button class="btn btn-primary w-100 py-2 mb-2" type="submit">Authorized Sign In</button>
@@ -187,5 +221,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <a href="../index.php" class="back-link">← Return to Public Website</a>
     </div>
 
+    <!-- Password visibility toggle script -->
+    <script>
+        const togglePassword = document.querySelector('#togglePassword');
+        const password = document.querySelector('#password');
+
+        togglePassword.addEventListener('click', function () {
+            const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
+            password.setAttribute('type', type);
+            this.classList.toggle('bi-eye');
+            this.classList.toggle('bi-eye-slash');
+        });
+    </script>
 </body>
 </html>

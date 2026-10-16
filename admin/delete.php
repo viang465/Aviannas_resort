@@ -13,8 +13,8 @@ if (isset($_GET['id'])) {
     // Safely copy to deleted_bookings archive before deletion
     $conn->begin_transaction();
     try {
-        $copyStmt = $conn->prepare("INSERT INTO deleted_bookings (name, email, contact, address, room_type, checkin_date, checkout_date, deletion_date) 
-                                    SELECT name, email, contact, address, room_type, checkin_date, checkout_date, NOW() 
+        $copyStmt = $conn->prepare("INSERT INTO deleted_bookings (name, email, contact, address, room_type, cottage_type, pax, payment_method, total_price, checkin_date, checkout_date, deletion_date) 
+                                    SELECT name, email, contact, address, room_type, cottage_type, pax, payment_method, total_price, checkin_date, checkout_date, NOW() 
                                     FROM bookings WHERE id = ?");
         $copyStmt->bind_param("i", $id);
         $copyStmt->execute();

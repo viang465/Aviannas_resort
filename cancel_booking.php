@@ -34,11 +34,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 INSERT INTO deleted_bookings
                     (name, email, contact, address, room_type, cottage_type, pax,
                      payment_method, total_price,
-                     checkin_date, checkout_date, deletion_date, deleted_at)
+                     checkin_date, checkout_date, deletion_date)
                 SELECT
                     name, email, contact, address, room_type, cottage_type, pax,
                     payment_method, total_price,
-                    checkin_date, checkout_date, NOW(), NOW()
+                    checkin_date, checkout_date, NOW()
                 FROM bookings
                 WHERE email = ?
             ";
@@ -71,7 +71,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cancel Reservation — Avianna's Inland Resort</title>
-    <link rel="icon"  type="image/png" href="img/avianna.png" >
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         :root { --dark: #1e4d40; }

@@ -1,6 +1,12 @@
 <?php
 session_start();
 require_once '../../conn.php';
+require_once '../../accommodations.php'; // shared room/cottage catalog — same one book.php uses
+
+if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], ['admin', 'staff'], true)) {
+    header('Location: ../login.php');
+    exit();
+}
 
 $message = "";
 $error = "";
@@ -89,7 +95,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Guest Check-In | Reception</title>
-    <link rel="icon"  type="image/png" href="img/avianna.png" >
+    <link rel="icon"  type="image/png" href="../../img/avianna.png" >
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <style>
@@ -144,7 +150,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php else: ?>
             <!-- Walk-in Form -->
             <h5 class="fw-bold mb-3 text-dark"><i class="bi bi-person-plus-fill me-2"></i> New Walk-In Registration</h5>
-            <form method="POST" class="row g-3">
+            <form method="POST" class="row g-3" id="walkinForm">
                 <div class="col-md-6">
                     <label class="form-label fw-bold">Guest Name *</label>
                     <input type="text" name="name" class="form-control" required placeholder="Full Name">
@@ -163,31 +169,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Room / Pavilion Choice</label>
-                    <select name="room_type" class="form-select">
-                        <option value="None">None</option>
-                        <option value="Overnight Room">Overnight Room (₱2,500)</option>
-                        <option value="Poolside Pavilion">Poolside Pavilion (₱2,200)</option>
-                        <option value="Pavilion 1">Pavilion 1 (₱2,000)</option>
-                        <option value="New Pavilion">New Pavilion (₱3,500)</option>
+                    <select name="room_type" class="form-select" id="roomType">
+                        <option value="None" data-price="0">None</option>
+                        <?php foreach ($accommodations as $item): if ($item['type'] !== 'room') continue; ?>
+                            <option value="<?php echo htmlspecialchars($item['value'], ENT_QUOTES, 'UTF-8'); ?>"
+                                    data-price="<?php echo (int)$item['price']; ?>">
+                                <?php echo htmlspecialchars($item['title'], ENT_QUOTES, 'UTF-8'); ?> (₱<?php echo number_format($item['price']); ?>)
+                            </option>
+                        <?php endforeach; ?>
                     </select>
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Cottage Type</label>
-                    <select name="cottage_type" class="form-select">
-                        <option value="None">None</option>
-                        <option value="Cottage 6">Cottage 6 (₱500)</option>
-                        <option value="Cottage 400">Cottage 400 (₱400)</option>
-                        <option value="Cottage 600">Cottage 600 (₱600)</option>
+                    <select name="cottage_type" class="form-select" id="cottageType">
+                        <option value="None" data-price="0" data-elec="0">None</option>
+                        <?php foreach ($accommodations as $item): if ($item['type'] !== 'cottage') continue; ?>
+                            <option value="<?php echo htmlspecialchars($item['value'], ENT_QUOTES, 'UTF-8'); ?>"
+                                    data-price="<?php echo (int)$item['price']; ?>"
+                                    data-elec="<?php echo (int)($item['elec'] ?? 0); ?>">
+                                <?php
+                                    echo htmlspecialchars($item['title'], ENT_QUOTES, 'UTF-8');
+                                    echo ' (₱' . number_format($item['price']);
+                                    if (!empty($item['elec'])) echo ' + ₱' . number_format($item['elec']) . ' elec';
+                                    echo ')';
+                                ?>
+                            </option>
+                        <?php endforeach; ?>
                     </select>
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Number of Guests (Pax)</label>
                     <select name="pax" class="form-select">
-                        <option value="1-6">1 - 6 pax</option>
-                        <option value="7-15">7 - 15 pax</option>
-                        <option value="16-30">16 - 30 pax</option>
-                        <option value="31-50">31 - 50 pax</option>
-                        <option value="50+">50+ pax</option>
+                        <option value="1-6">Up to 6 guests</option>
+                        <option value="7-10">7 – 10 guests</option>
+                        <option value="11-15">11 – 15 guests</option>
+                        <option value="16-40">16 – 40 guests</option>
                     </select>
                 </div>
                 <div class="col-md-6">
@@ -207,20 +223,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Check-In Date</label>
-                    <input type="date" name="checkin_date" class="form-control" value="<?php echo date('Y-m-d'); ?>">
+                    <input type="date" name="checkin_date" class="form-control" id="checkinDate" value="<?php echo date('Y-m-d'); ?>">
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Check-Out Date</label>
-                    <input type="date" name="checkout_date" class="form-control" value="<?php echo date('Y-m-d', strtotime('+1 day')); ?>">
+                    <input type="date" name="checkout_date" class="form-control" id="checkoutDate" value="<?php echo date('Y-m-d', strtotime('+1 day')); ?>">
                 </div>
                 <div class="col-md-6">
                     <label class="form-label fw-bold">Total Bill (₱)</label>
-                    <input type="number" step="0.01" name="total_price" class="form-control" required placeholder="0.00">
+                    <input type="number" step="0.01" name="total_price" class="form-control" id="totalPrice" required placeholder="0.00">
+                    <small class="text-muted d-block mt-1">Auto-calculated from the selected room/cottage — feel free to adjust for walk-in discounts.</small>
                 </div>
                 <div class="col-12 mt-4">
                     <button type="submit" class="btn btn-success w-100 py-2 fw-bold">Process Check-In & Print Receipt</button>
                 </div>
             </form>
+            <script>
+            (function() {
+                const roomSel     = document.getElementById('roomType');
+                const cottageSel  = document.getElementById('cottageType');
+                const checkinEl   = document.getElementById('checkinDate');
+                const checkoutEl  = document.getElementById('checkoutDate');
+                const totalEl     = document.getElementById('totalPrice');
+
+                function calcTotal() {
+                    const roomPrice    = parseInt(roomSel.selectedOptions[0]?.dataset.price) || 0;
+                    const cottagePrice = parseInt(cottageSel.selectedOptions[0]?.dataset.price) || 0;
+                    const elec         = parseInt(cottageSel.selectedOptions[0]?.dataset.elec) || 0;
+
+                    let nights = 1;
+                    if (checkinEl.value && checkoutEl.value) {
+                        const diff = (new Date(checkoutEl.value) - new Date(checkinEl.value)) / 86400000;
+                        if (diff > 0) nights = diff;
+                    }
+                    totalEl.value = ((roomPrice * nights) + cottagePrice + elec).toFixed(2);
+                }
+
+                [roomSel, cottageSel, checkinEl, checkoutEl].forEach(el => el.addEventListener('change', calcTotal));
+                calcTotal();
+            })();
+            </script>
         <?php endif; ?>
     </div>
 </div>

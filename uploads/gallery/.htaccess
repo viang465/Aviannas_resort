@@ -1,0 +1,6 @@
+# Uploaded gallery images only — never execute scripts from this folder.
+<FilesMatch "\.(php|php3|php4|php5|php7|phtml|pl|py|cgi|asp|aspx|sh)$">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+php_flag engine off

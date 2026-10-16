@@ -3,7 +3,7 @@
 function getNotificationConfig() {
     return [
         "title" => "Avianna's Inland Resort",
-        "icon" => "https://cdn-icons-png.flaticon.com/512/290/290441.png", // Replace with your logo
+        "icon" => "img/Avianna_bg.jpg", // Replace with your logo
     ];
 }
 ?>

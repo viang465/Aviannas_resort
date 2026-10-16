@@ -5,10 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>About Us | Avianna's Inland Resort</title>
-    <link rel="icon"  type="image/png" href="img/avianna.png" >
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
 
@@ -17,7 +15,7 @@
         --tropical-green: #1a4731;
         --accent-gold: #ffc107;
         --deep-palm: #0e2a1d;
-        --soft-cream: #f8f9fa;
+        --soft-cream: #f8f9fa; /* Changed from #000000 for better contrast */
         --text-muted: #6c757d;
     }
 
@@ -32,9 +30,11 @@
         font-family: 'Playfair Display', serif;
     }
 
+    /* Navbar */
     .navbar {
         background-color: var(--tropical-green) !important;
         box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        z-index: 1030;
     }
     .navbar-brand {
         font-size: 1.8rem;
@@ -42,17 +42,20 @@
     }
 
     .hero {
-        position: relative;
-        min-height: 50vh;
-        display: flex;
-        flex-direction: column; 
-        align-items: center;
-        justify-content: center;
-        background: url('img/Avianna_bg.jpg') center/cover no-repeat;
-        background-color: var(--tropical-green);
-        color: white;
-    }
+            position: relative;
+            min-height: 50vh;
+            display: flex;
+            flex-direction: column; 
+            align-items: center;
+            justify-content: center;
+            /* Integrated background with logo and tropical green theme */
+            background: url('img/Avianna_bg.jpg') center/contain no-repeat;
+            background-size: cover;
+            background-color: var(--tropical-green);
+            color: white;
+        }
 
+    /* Feature Cards */
     .card-feature {
         background: white;
         padding: 40px 20px;
@@ -60,7 +63,7 @@
         box-shadow: 0 10px 30px rgba(0,0,0,0.05);
         transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         height: 100%;
-        border: 1px solid #eee;
+        border: 1px solid #eee; /* Lightened from pure black */
     }
 
     .card-feature:hover {
@@ -70,12 +73,12 @@
     }
 
     .icon-bounce {
-        font-size: 3rem;
+        font-size: 3.5rem;
         display: inline-block;
         margin-bottom: 15px;
-        color: var(--tropical-green);
     }
 
+    /* Maps & Content */
     .map-container {
         border-radius: 25px;
         overflow: hidden;
@@ -86,7 +89,7 @@
 
     iframe {
         width: 100%;
-        display: block;
+        display: block; /* Removes bottom gap */
     }
 
     .text-teal {
@@ -98,8 +101,11 @@
         border-top: 4px solid var(--accent-gold);
     }
 
-    a { transition: color 0.3s ease; }
+    a {
+        transition: color 0.3s ease;
+    }
 
+    /* Fix for Bootstrap buttons to ensure they match the theme */
     .btn-warning {
         background-color: var(--accent-gold);
         border: none;
@@ -135,34 +141,23 @@
     <div class="container py-5"> 
         <h1 class="display-1 fw-bold animate__animated animate__zoomIn">Our Story</h1>
         <p class="lead mb-4 animate__animated animate__fadeInUp animate__delay-1s">Discover the heart and soul of Avianna's Inland Resort.</p>
+        
     </div>
 </header>
 
 <div class="container py-5">
     <div class="row g-4 text-center">
         <div class="col-md-3 animate__animated animate__fadeInUp" style="animation-delay: 0.1s;">
-            <div class="card-feature">
-                <div class="icon-bounce"><i class="bi bi-tree-fill"></i></div>
-                <h5 class="fw-bold">Nature Friendly</h5>
-            </div>
+            <div class="card-feature"><div class="icon-bounce">🌿</div><h5 class="fw-bold">Nature Friendly</h5></div>
         </div>
         <div class="col-md-3 animate__animated animate__fadeInUp" style="animation-delay: 0.2s;">
-            <div class="card-feature">
-                <div class="icon-bounce"><i class="bi bi-water"></i></div>
-                <h5 class="fw-bold">Clean Pools</h5>
-            </div>
+            <div class="card-feature"><div class="icon-bounce">🏊</div><h5 class="fw-bold">Clean Pools</h5></div>
         </div>
         <div class="col-md-3 animate__animated animate__fadeInUp" style="animation-delay: 0.3s;">
-            <div class="card-feature">
-                <div class="icon-bounce"><i class="bi bi-house-door-fill"></i></div>
-                <h5 class="fw-bold">Luxury Rooms</h5>
-            </div>
+            <div class="card-feature"><div class="icon-bounce">🏨</div><h5 class="fw-bold">Luxury Rooms</h5></div>
         </div>
         <div class="col-md-3 animate__animated animate__fadeInUp" style="animation-delay: 0.4s;">
-            <div class="card-feature">
-                <div class="icon-bounce"><i class="bi bi-cup-hot-fill"></i></div>
-                <h5 class="fw-bold">Local Food</h5>
-            </div>
+            <div class="card-feature"><div class="icon-bounce">🍽</div><h5 class="fw-bold">Local Food</h5></div>
         </div>
     </div>
 
@@ -177,18 +172,19 @@
         </div>
     </div>
 
+
     <div class="row mt-5">
         <div class="col-md-12">
             <h2 class="fw-bold mb-4 text-center">Our Location</h2>
             <p class="lead text-center mx-auto mb-4" style="max-width: 800px;">Nestled in the heart of the countryside, Avianna's Inland Resort offers breathtaking views and a tranquil atmosphere perfect for your next escape.</p>
             
             <div class="map-container">
-                <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d579.3414830161042!2d122.53064800665541!3d10.79774391575876!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x33aefd05b0cf787b%3A0xe29cfc1c7abdb84c!2sAvianna%20Inland%20Resort!5e1!3m2!1sen!2sph!4v1787727271126!5m2!1sen!2sph" width="600" height="450" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+                <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d553.7427692724112!2d122.53049841557223!3d10.798155916240907!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x33aefd05b0cf787b%3A0xe29cfc1c7abdb84c!2sAvianna%20Inland%20Resort!5e1!3m2!1sen!2sph!4v1788578438211!5m2!1sen!2sph" width="600" height="450" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>
             </div>
 
             <div class="text-center mt-4">
                 <p class="mb-1 fw-bold">Zone 6 Cabugao Sur Sta. Barbara, Iloilo City, Philippines</p>
-                <p class="mb-1">Email: <a href="mailto:aviannasinlandresort@gmail.com">aviannasinlandresort@gmail.com</a> | Phone: <a href="tel:+639388376967">09388376967</a></p>
+                <p class="mb-1">Email: <a href="mailto:aviannasinlandresort@gmail.com">aviannasinlandresort@gmail.com</a> | Phone: <a href="tel:+1234567890">09388376967</a></p>
             </div>
         </div>
     </div>
@@ -196,10 +192,11 @@
 
 <footer class="bg-dark text-white text-center py-4 mt-5">
     <div class="container">
-        <p class="mb-0">&copy; 2026 Avianna's Inland Resort. All rights reserved.</p>
+        <p class="mb-0">© 2026 Avianna's Inland Resort. All rights reserved.</p>
     </div>
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
 </body>
 </html>

@@ -2,6 +2,11 @@
 session_start();
 require_once '../../conn.php';
 
+if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], ['admin', 'staff'], true)) {
+    header('Location: ../login.php');
+    exit();
+}
+
 $booking_id = intval($_GET['id'] ?? 0);
 
 if ($booking_id <= 0) {
